@@ -348,6 +348,16 @@ function Forgot({ nav, toast }: { nav: (s: string) => void; toast: (m: string) =
   );
 }
 
+function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
+  return (
+    <div style={{ ...s.card, padding: 32, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+      <div style={{ width: 64, height: 64, borderRadius: 32, background: G.gold + "1A", border: `1px solid ${G.gold}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 14 }}>{icon}</div>
+      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 13, color: G.muted, lineHeight: 1.5, maxWidth: 260 }}>{sub}</div>
+    </div>
+  );
+}
+
 function HomeTab() {
   return (
     <div style={{ padding: "20px 20px 0" }}>
