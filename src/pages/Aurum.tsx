@@ -446,14 +446,13 @@ function ProfileTab({ nav }: { nav: (s: string) => void }) {
 
 function Dashboard({ nav }: { nav: (s: string) => void }) {
   const [tab, setTab] = useState("Home");
-  const tabs = ["Home", "Portfolio", "Markets", "Activity", "Profile"];
+  const tabs = ["Home", "Markets", "Transactions", "Profile"];
   return (
     <div style={{ height: "100vh", position: "relative" }}>
       <div style={{ height: "100vh", overflowY: "auto", paddingBottom: 80 }}>
         {tab === "Home" && <HomeTab />}
-        {tab === "Portfolio" && <PortfolioTab />}
         {tab === "Markets" && <MarketsTab />}
-        {tab === "Activity" && <ActivityTab />}
+        {tab === "Transactions" && <TransactionsTab />}
         {tab === "Profile" && <ProfileTab nav={nav} />}
       </div>
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: G.card, borderTop: `1px solid ${G.border}`, display: "flex", padding: "8px 0 12px", zIndex: 100 }}>
