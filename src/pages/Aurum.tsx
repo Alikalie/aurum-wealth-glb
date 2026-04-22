@@ -93,9 +93,8 @@ const NavIcon = ({ name, active }: { name: string; active: boolean }) => {
   const c = active ? G.gold : G.inactive;
   const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: c, strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   if (name === "Home") return <svg {...props}><path d="M3 10l9-7 9 7v10a2 2 0 01-2 2h-4v-7h-6v7H5a2 2 0 01-2-2z"/></svg>;
-  if (name === "Portfolio") return <svg {...props}><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 5"/></svg>;
   if (name === "Markets") return <svg {...props}><path d="M3 17l5-5 4 4 8-9"/><path d="M14 7h6v6"/></svg>;
-  if (name === "Activity") return <svg {...props}><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>;
+  if (name === "Transactions") return <svg {...props}><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>;
   return <svg {...props}><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>;
 };
 
@@ -349,9 +348,17 @@ function Forgot({ nav, toast }: { nav: (s: string) => void; toast: (m: string) =
   );
 }
 
+function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
+  return (
+    <div style={{ ...s.card, padding: 32, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+      <div style={{ width: 64, height: 64, borderRadius: 32, background: G.gold + "1A", border: `1px solid ${G.gold}33`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 14 }}>{icon}</div>
+      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 13, color: G.muted, lineHeight: 1.5, maxWidth: 260 }}>{sub}</div>
+    </div>
+  );
+}
+
 function HomeTab() {
-  const [cat, setCat] = useState("All");
-  const cats = ["All", "Stocks", "Crypto", "ETFs", "Bonds"];
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
@@ -361,99 +368,17 @@ function HomeTab() {
         </div>
         <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>JD</div>
       </div>
-
-      <div style={{ ...s.card, padding: 22 }}>
-        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>PORTFOLIO VALUE</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "8px 0 4px" }}>
-          <div style={{ ...s.serif, fontSize: 34, fontWeight: 600 }}>$13,834.66</div>
-        </div>
-        <div style={{ display: "inline-block", background: G.green + "22", color: G.green, padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600 }}>+$284.20 (+2.1%)</div>
-        <div style={{ marginTop: 16 }}>
-          <Sparkline data={[5, 6, 5.5, 7, 6.5, 8, 7.5, 9, 8.5]} color={G.green} w={310} h={70} />
-        </div>
+      <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>BALANCE</div>
+        <div style={{ ...s.serif, fontSize: 34, fontWeight: 600, margin: "8px 0 4px" }}>$0.00</div>
+        <div style={{ fontSize: 12, color: G.muted }}>Fund your account to get started</div>
       </div>
-
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "20px 0 16px", scrollbarWidth: "none" }}>
-        {cats.map(c => (
-          <button key={c} onClick={() => setCat(c)} style={{ padding: "8px 16px", borderRadius: 20, border: `1px solid ${cat === c ? G.gold : G.border}`, background: cat === c ? G.gold : "transparent", color: cat === c ? "#1a1208" : G.text, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}>{c}</button>
-        ))}
-      </div>
-
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, margin: "20px 0 12px" }}>Top movers</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {MOVERS.map(m => (
-          <div key={m.sym} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: m.color + "22", color: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{m.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.sym}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{m.name}</div>
-            </div>
-            <Sparkline data={m.data} color={m.up ? G.green : G.red} w={50} h={24} />
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{m.price}</div>
-              <div style={{ fontSize: 11, color: m.up ? G.green : G.red }}>{m.chg}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PortfolioTab() {
-  const segs = [{ l: "Stocks", v: 38, c: G.teal }, { l: "Crypto", v: 32, c: G.gold }, { l: "ETFs", v: 18, c: G.blue }, { l: "Other", v: 12, c: "#5A5855" }];
-  const C = 2 * Math.PI * 60;
-  let off = 0;
-  return (
-    <div style={{ padding: "20px 20px 0" }}>
-      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 20px" }}>Portfolio</h1>
-      <div style={{ ...s.card, display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{ position: "relative", width: 150, height: 150, flexShrink: 0 }}>
-          <svg width={150} height={150} viewBox="0 0 150 150">
-            {segs.map((sg, i) => {
-              const dash = (sg.v / 100) * C;
-              const el = <circle key={i} cx={75} cy={75} r={60} fill="none" stroke={sg.c} strokeWidth={16} strokeDasharray={`${dash} ${C}`} strokeDashoffset={-off} transform="rotate(-90 75 75)" />;
-              off += dash;
-              return el;
-            })}
-          </svg>
-          <div style={{ position: "absolute", top: 0, left: 0, width: 150, height: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ fontSize: 11, color: G.muted }}>Portfolio</div>
-            <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>$13,834</div>
-          </div>
-        </div>
-        <div style={{ flex: 1 }}>
-          {segs.map(sg => (
-            <div key={sg.l} style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0" }}>
-              <div style={{ width: 10, height: 10, borderRadius: 5, background: sg.c }} />
-              <div style={{ flex: 1, fontSize: 13 }}>{sg.l}</div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{sg.v}%</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, margin: "24px 0 12px" }}>Holdings</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {HOLDINGS.map(h => (
-          <div key={h.sym} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: h.color + "22", color: h.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{h.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{h.name}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{h.shares}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{h.value}</div>
-              <div style={{ fontSize: 11, color: h.up ? G.green : G.red }}>{h.pl}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <EmptyState icon="✦" title="Welcome to Aurum" sub="Your personalized insights will appear here once you start investing." />
     </div>
   );
 }
 
 function MarketsTab() {
-  const idx = [{ n: "S&P 500", v: "4,783.45", c: "+0.8%", up: true }, { n: "NASDAQ", v: "15,012", c: "+1.2%", up: true }, { n: "BTC", v: "$43,210", c: "+2.4%", up: true }, { n: "Gold", v: "$2,034", c: "-0.3%", up: false }, { n: "Oil", v: "$78.42", c: "+1.1%", up: true }];
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Markets</h1>
@@ -461,68 +386,16 @@ function MarketsTab() {
         <input style={{ ...s.input, paddingLeft: 40 }} placeholder="Search assets..." />
         <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
       </div>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", marginBottom: 20, scrollbarWidth: "none" }}>
-        {idx.map(i => (
-          <div key={i.n} style={{ ...s.card, padding: 12, minWidth: 110, flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: G.muted }}>{i.n}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, margin: "4px 0" }}>{i.v}</div>
-            <div style={{ fontSize: 11, color: i.up ? G.green : G.red }}>{i.c}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, marginBottom: 12 }}>All assets</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {MOVERS.concat(MOVERS).map((m, i) => (
-          <div key={i} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: m.color + "22", color: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{m.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.sym}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{m.name}</div>
-            </div>
-            <Sparkline data={m.data} color={m.up ? G.green : G.red} w={50} h={24} />
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{m.price}</div>
-              <div style={{ fontSize: 11, color: m.up ? G.green : G.red }}>{m.chg}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <EmptyState icon="📈" title="No markets yet" sub="Live market data will appear here when available." />
     </div>
   );
 }
 
-function ActivityTab() {
-  const [f, setF] = useState("All");
-  const filt = ["All", "Buy", "Sell", "Dividend"];
+function TransactionsTab() {
   return (
     <div style={{ padding: "20px 20px 0" }}>
-      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Activity</h1>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {filt.map(x => (
-          <button key={x} onClick={() => setF(x)} style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${f === x ? G.gold : G.border}`, background: f === x ? G.gold : "transparent", color: f === x ? "#1a1208" : G.text, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{x}</button>
-        ))}
-      </div>
-      {TXNS.map(g => (
-        <div key={g.day} style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.6, marginBottom: 10 }}>{g.day.toUpperCase()}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {g.items.map((t, i) => {
-              const cfg = t.type === "buy" ? { icon: "↓", c: G.green } : t.type === "sell" ? { icon: "↑", c: G.red } : { icon: "✦", c: G.gold };
-              const amtColor = t.amt.startsWith("+") ? G.green : G.red;
-              return (
-                <div key={i} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 19, background: cfg.c + "22", color: cfg.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>{cfg.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, textTransform: "capitalize" }}>{t.type} {t.sym}</div>
-                    <div style={{ fontSize: 11, color: G.muted }}>{t.time}</div>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: amtColor }}>{t.amt}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Transactions</h1>
+      <EmptyState icon="↔" title="No transactions yet" sub="Your buys, sells and dividends will show up here." />
     </div>
   );
 }
@@ -573,14 +446,13 @@ function ProfileTab({ nav }: { nav: (s: string) => void }) {
 
 function Dashboard({ nav }: { nav: (s: string) => void }) {
   const [tab, setTab] = useState("Home");
-  const tabs = ["Home", "Portfolio", "Markets", "Activity", "Profile"];
+  const tabs = ["Home", "Markets", "Transactions", "Profile"];
   return (
     <div style={{ height: "100vh", position: "relative" }}>
       <div style={{ height: "100vh", overflowY: "auto", paddingBottom: 80 }}>
         {tab === "Home" && <HomeTab />}
-        {tab === "Portfolio" && <PortfolioTab />}
         {tab === "Markets" && <MarketsTab />}
-        {tab === "Activity" && <ActivityTab />}
+        {tab === "Transactions" && <TransactionsTab />}
         {tab === "Profile" && <ProfileTab nav={nav} />}
       </div>
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 390, background: G.card, borderTop: `1px solid ${G.border}`, display: "flex", padding: "8px 0 12px", zIndex: 100 }}>
