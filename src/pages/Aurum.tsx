@@ -349,8 +349,6 @@ function Forgot({ nav, toast }: { nav: (s: string) => void; toast: (m: string) =
 }
 
 function HomeTab() {
-  const [cat, setCat] = useState("All");
-  const cats = ["All", "Stocks", "Crypto", "ETFs", "Bonds"];
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
@@ -360,41 +358,12 @@ function HomeTab() {
         </div>
         <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>JD</div>
       </div>
-
-      <div style={{ ...s.card, padding: 22 }}>
-        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>PORTFOLIO VALUE</div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "8px 0 4px" }}>
-          <div style={{ ...s.serif, fontSize: 34, fontWeight: 600 }}>$13,834.66</div>
-        </div>
-        <div style={{ display: "inline-block", background: G.green + "22", color: G.green, padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 600 }}>+$284.20 (+2.1%)</div>
-        <div style={{ marginTop: 16 }}>
-          <Sparkline data={[5, 6, 5.5, 7, 6.5, 8, 7.5, 9, 8.5]} color={G.green} w={310} h={70} />
-        </div>
+      <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>BALANCE</div>
+        <div style={{ ...s.serif, fontSize: 34, fontWeight: 600, margin: "8px 0 4px" }}>$0.00</div>
+        <div style={{ fontSize: 12, color: G.muted }}>Fund your account to get started</div>
       </div>
-
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", margin: "20px 0 16px", scrollbarWidth: "none" }}>
-        {cats.map(c => (
-          <button key={c} onClick={() => setCat(c)} style={{ padding: "8px 16px", borderRadius: 20, border: `1px solid ${cat === c ? G.gold : G.border}`, background: cat === c ? G.gold : "transparent", color: cat === c ? "#1a1208" : G.text, fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit" }}>{c}</button>
-        ))}
-      </div>
-
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, margin: "20px 0 12px" }}>Top movers</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {MOVERS.map(m => (
-          <div key={m.sym} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: m.color + "22", color: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{m.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.sym}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{m.name}</div>
-            </div>
-            <Sparkline data={m.data} color={m.up ? G.green : G.red} w={50} h={24} />
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{m.price}</div>
-              <div style={{ fontSize: 11, color: m.up ? G.green : G.red }}>{m.chg}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <EmptyState icon="✦" title="Welcome to Aurum" sub="Your personalized insights will appear here once you start investing." />
     </div>
   );
 }
