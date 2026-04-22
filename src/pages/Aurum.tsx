@@ -378,60 +378,7 @@ function HomeTab() {
   );
 }
 
-function PortfolioTab() {
-  const segs = [{ l: "Stocks", v: 38, c: G.teal }, { l: "Crypto", v: 32, c: G.gold }, { l: "ETFs", v: 18, c: G.blue }, { l: "Other", v: 12, c: "#5A5855" }];
-  const C = 2 * Math.PI * 60;
-  let off = 0;
-  return (
-    <div style={{ padding: "20px 20px 0" }}>
-      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 20px" }}>Portfolio</h1>
-      <div style={{ ...s.card, display: "flex", alignItems: "center", gap: 14 }}>
-        <div style={{ position: "relative", width: 150, height: 150, flexShrink: 0 }}>
-          <svg width={150} height={150} viewBox="0 0 150 150">
-            {segs.map((sg, i) => {
-              const dash = (sg.v / 100) * C;
-              const el = <circle key={i} cx={75} cy={75} r={60} fill="none" stroke={sg.c} strokeWidth={16} strokeDasharray={`${dash} ${C}`} strokeDashoffset={-off} transform="rotate(-90 75 75)" />;
-              off += dash;
-              return el;
-            })}
-          </svg>
-          <div style={{ position: "absolute", top: 0, left: 0, width: 150, height: 150, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ fontSize: 11, color: G.muted }}>Portfolio</div>
-            <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>$13,834</div>
-          </div>
-        </div>
-        <div style={{ flex: 1 }}>
-          {segs.map(sg => (
-            <div key={sg.l} style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0" }}>
-              <div style={{ width: 10, height: 10, borderRadius: 5, background: sg.c }} />
-              <div style={{ flex: 1, fontSize: 13 }}>{sg.l}</div>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{sg.v}%</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, margin: "24px 0 12px" }}>Holdings</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {HOLDINGS.map(h => (
-          <div key={h.sym} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: h.color + "22", color: h.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{h.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{h.name}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{h.shares}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{h.value}</div>
-              <div style={{ fontSize: 11, color: h.up ? G.green : G.red }}>{h.pl}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function MarketsTab() {
-  const idx = [{ n: "S&P 500", v: "4,783.45", c: "+0.8%", up: true }, { n: "NASDAQ", v: "15,012", c: "+1.2%", up: true }, { n: "BTC", v: "$43,210", c: "+2.4%", up: true }, { n: "Gold", v: "$2,034", c: "-0.3%", up: false }, { n: "Oil", v: "$78.42", c: "+1.1%", up: true }];
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Markets</h1>
@@ -439,68 +386,16 @@ function MarketsTab() {
         <input style={{ ...s.input, paddingLeft: 40 }} placeholder="Search assets..." />
         <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: 16 }}>🔍</span>
       </div>
-      <div style={{ display: "flex", gap: 10, overflowX: "auto", marginBottom: 20, scrollbarWidth: "none" }}>
-        {idx.map(i => (
-          <div key={i.n} style={{ ...s.card, padding: 12, minWidth: 110, flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: G.muted }}>{i.n}</div>
-            <div style={{ fontSize: 14, fontWeight: 600, margin: "4px 0" }}>{i.v}</div>
-            <div style={{ fontSize: 11, color: i.up ? G.green : G.red }}>{i.c}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, marginBottom: 12 }}>All assets</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {MOVERS.concat(MOVERS).map((m, i) => (
-          <div key={i} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 19, background: m.color + "22", color: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 11 }}>{m.sym.slice(0, 3)}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{m.sym}</div>
-              <div style={{ fontSize: 11, color: G.muted }}>{m.name}</div>
-            </div>
-            <Sparkline data={m.data} color={m.up ? G.green : G.red} w={50} h={24} />
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600 }}>{m.price}</div>
-              <div style={{ fontSize: 11, color: m.up ? G.green : G.red }}>{m.chg}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <EmptyState icon="📈" title="No markets yet" sub="Live market data will appear here when available." />
     </div>
   );
 }
 
-function ActivityTab() {
-  const [f, setF] = useState("All");
-  const filt = ["All", "Buy", "Sell", "Dividend"];
+function TransactionsTab() {
   return (
     <div style={{ padding: "20px 20px 0" }}>
-      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Activity</h1>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        {filt.map(x => (
-          <button key={x} onClick={() => setF(x)} style={{ padding: "8px 14px", borderRadius: 20, border: `1px solid ${f === x ? G.gold : G.border}`, background: f === x ? G.gold : "transparent", color: f === x ? "#1a1208" : G.text, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>{x}</button>
-        ))}
-      </div>
-      {TXNS.map(g => (
-        <div key={g.day} style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.6, marginBottom: 10 }}>{g.day.toUpperCase()}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {g.items.map((t, i) => {
-              const cfg = t.type === "buy" ? { icon: "↓", c: G.green } : t.type === "sell" ? { icon: "↑", c: G.red } : { icon: "✦", c: G.gold };
-              const amtColor = t.amt.startsWith("+") ? G.green : G.red;
-              return (
-                <div key={i} style={{ ...s.card, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 19, background: cfg.c + "22", color: cfg.c, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700 }}>{cfg.icon}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, textTransform: "capitalize" }}>{t.type} {t.sym}</div>
-                    <div style={{ fontSize: 11, color: G.muted }}>{t.time}</div>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: amtColor }}>{t.amt}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      <h1 style={{ ...s.serif, fontSize: 26, fontWeight: 600, margin: "0 0 16px" }}>Transactions</h1>
+      <EmptyState icon="↔" title="No transactions yet" sub="Your buys, sells and dividends will show up here." />
     </div>
   );
 }
