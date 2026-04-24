@@ -2,11 +2,15 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { PALETTES, buildStyles, ThemeMode } from "./theme";
+import i18n from "@/i18n";
 
 export type Profile = {
   id: string;
   user_id: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
   email: string | null;
   country_code: string | null;
   country_name: string | null;
@@ -17,6 +21,9 @@ export type Profile = {
   earned: number;
   withdrawn: number;
   theme: string;
+  language: string;
+  is_blocked: boolean;
+  account_number: number | null;
 };
 
 type Ctx = {
@@ -66,6 +73,9 @@ export function AurumProvider({ children }: { children: ReactNode }) {
       if (p.theme === "dark" || p.theme === "light") {
         setThemeModeState(p.theme);
         localStorage.setItem("aurum-theme", p.theme);
+      }
+      if (p.language && p.language !== i18n.language) {
+        i18n.changeLanguage(p.language);
       }
     }
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
