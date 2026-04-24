@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAurum } from "../AurumContext";
 import { COUNTRIES } from "../data";
-import { ScreenShell, GoogleIcon } from "../ui";
+import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
-import { useTranslation } from "react-i18next";
 
 const TICKERS = [
   { sym: "BTC", chg: "+2.4%", up: true }, { sym: "AAPL", chg: "+0.8%", up: true },
