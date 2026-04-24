@@ -14,10 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_credits: {
+        Row: {
+          amount: number
+          bucket: string
+          created_at: string
+          created_by: string
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bucket: string
+          created_at?: string
+          created_by: string
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bucket?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       admin_payment_accounts: {
         Row: {
           account_name: string
           account_number: string
+          country_code: string | null
           created_at: string
           id: string
           instructions: string | null
@@ -29,6 +60,7 @@ export type Database = {
         Insert: {
           account_name: string
           account_number: string
+          country_code?: string | null
           created_at?: string
           id?: string
           instructions?: string | null
@@ -40,6 +72,7 @@ export type Database = {
         Update: {
           account_name?: string
           account_number?: string
+          country_code?: string | null
           created_at?: string
           id?: string
           instructions?: string | null
@@ -163,6 +196,8 @@ export type Database = {
       products: {
         Row: {
           created_at: string
+          cycle_days: number
+          daily_income: number
           description: string | null
           expected_return_pct: number
           id: string
@@ -170,10 +205,14 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+          purchase_limit: number
+          resale_enabled: boolean
           updated_at: string
         }
         Insert: {
           created_at?: string
+          cycle_days?: number
+          daily_income?: number
           description?: string | null
           expected_return_pct?: number
           id?: string
@@ -181,10 +220,14 @@ export type Database = {
           is_active?: boolean
           name: string
           price: number
+          purchase_limit?: number
+          resale_enabled?: boolean
           updated_at?: string
         }
         Update: {
           created_at?: string
+          cycle_days?: number
+          daily_income?: number
           description?: string | null
           expected_return_pct?: number
           id?: string
@@ -192,12 +235,15 @@ export type Database = {
           is_active?: boolean
           name?: string
           price?: number
+          purchase_limit?: number
+          resale_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
       }
       profiles: {
         Row: {
+          account_number: number | null
           country_code: string | null
           country_name: string | null
           created_at: string
@@ -205,16 +251,22 @@ export type Database = {
           currency_locked_until: string
           earned: number
           email: string | null
+          first_name: string | null
           full_name: string | null
           id: string
           invested: number
+          is_blocked: boolean
+          language: string
+          last_name: string | null
           payment_edit_locked: boolean
+          phone: string | null
           theme: string
           updated_at: string
           user_id: string
           withdrawn: number
         }
         Insert: {
+          account_number?: number | null
           country_code?: string | null
           country_name?: string | null
           created_at?: string
@@ -222,16 +274,22 @@ export type Database = {
           currency_locked_until?: string
           earned?: number
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
           invested?: number
+          is_blocked?: boolean
+          language?: string
+          last_name?: string | null
           payment_edit_locked?: boolean
+          phone?: string | null
           theme?: string
           updated_at?: string
           user_id: string
           withdrawn?: number
         }
         Update: {
+          account_number?: number | null
           country_code?: string | null
           country_name?: string | null
           created_at?: string
@@ -239,10 +297,15 @@ export type Database = {
           currency_locked_until?: string
           earned?: number
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
           id?: string
           invested?: number
+          is_blocked?: boolean
+          language?: string
+          last_name?: string | null
           payment_edit_locked?: boolean
+          phone?: string | null
           theme?: string
           updated_at?: string
           user_id?: string
@@ -268,35 +331,95 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          amount: number
+          bucket: string | null
+          created_at: string
+          currency: string
+          id: string
+          kind: Database["public"]["Enums"]["txn_kind"]
+          note: string | null
+          reference_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bucket?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          kind: Database["public"]["Enums"]["txn_kind"]
+          note?: string | null
+          reference_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bucket?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["txn_kind"]
+          note?: string | null
+          reference_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_products: {
         Row: {
+          bought_from_user: string | null
+          cycle_start_at: string
+          days_paid: number
           id: string
+          last_payout_at: string | null
+          listed_at: string | null
+          listed_for_sale: boolean
+          listing_price: number | null
           product_id: string
           purchase_price: number
           purchased_at: string
           sale_price: number | null
           sold_at: string | null
           status: Database["public"]["Enums"]["user_product_status"]
+          total_earned: number
           user_id: string
         }
         Insert: {
+          bought_from_user?: string | null
+          cycle_start_at?: string
+          days_paid?: number
           id?: string
+          last_payout_at?: string | null
+          listed_at?: string | null
+          listed_for_sale?: boolean
+          listing_price?: number | null
           product_id: string
           purchase_price: number
           purchased_at?: string
           sale_price?: number | null
           sold_at?: string | null
           status?: Database["public"]["Enums"]["user_product_status"]
+          total_earned?: number
           user_id: string
         }
         Update: {
+          bought_from_user?: string | null
+          cycle_start_at?: string
+          days_paid?: number
           id?: string
+          last_payout_at?: string | null
+          listed_at?: string | null
+          listed_for_sale?: boolean
+          listing_price?: number | null
           product_id?: string
           purchase_price?: number
           purchased_at?: string
           sale_price?: number | null
           sold_at?: string | null
           status?: Database["public"]["Enums"]["user_product_status"]
+          total_earned?: number
           user_id?: string
         }
         Relationships: [
@@ -382,6 +505,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buy_resale: { Args: { p_user_product_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -389,12 +513,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_blocked: { Args: { _uid: string }; Returns: boolean }
+      list_product_for_sale: {
+        Args: { p_price: number; p_user_product_id: string }
+        Returns: undefined
+      }
+      purchase_product: { Args: { p_product_id: string }; Returns: string }
+      run_daily_payouts: { Args: never; Returns: number }
+      unlist_product: {
+        Args: { p_user_product_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user"
       payment_method_type: "mobile_money" | "bank" | "paypal"
+      txn_kind:
+        | "deposit"
+        | "withdrawal"
+        | "daily_earning"
+        | "admin_credit"
+        | "product_purchase"
+        | "product_sale"
+        | "cycle_complete"
       txn_status: "pending" | "approved" | "rejected" | "cancelled"
-      user_product_status: "owned" | "sold"
+      user_product_status: "owned" | "sold" | "expired"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -524,8 +667,17 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       payment_method_type: ["mobile_money", "bank", "paypal"],
+      txn_kind: [
+        "deposit",
+        "withdrawal",
+        "daily_earning",
+        "admin_credit",
+        "product_purchase",
+        "product_sale",
+        "cycle_complete",
+      ],
       txn_status: ["pending", "approved", "rejected", "cancelled"],
-      user_product_status: ["owned", "sold"],
+      user_product_status: ["owned", "sold", "expired"],
     },
   },
 } as const

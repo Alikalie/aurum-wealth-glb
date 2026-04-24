@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAurum } from "../AurumContext";
 import { COUNTRIES } from "../data";
-import { ScreenShell, GoogleIcon } from "../ui";
+import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
+import { LANGUAGES } from "@/i18n";
 
 const TICKERS = [
   { sym: "BTC", chg: "+2.4%", up: true }, { sym: "AAPL", chg: "+0.8%", up: true },
@@ -71,13 +72,20 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
 
 export function Login({ nav }: { nav: (s: string) => void }) {
   const { s, G, toast } = useAurum();
-  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [show, setShow] = useState(false), [load, setLoad] = useState(false);
+  const [email, setEmail] = useState(() => localStorage.getItem("aurum-remember-email") || "");
+  const [pw, setPw] = useState("");
+  const [show, setShow] = useState(false), [load, setLoad] = useState(false);
+  const [remember, setRemember] = useState(() => !!localStorage.getItem("aurum-remember-email"));
   const submit = async () => {
     if (!email || !pw) { toast("Please fill all fields"); return; }
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { toast("Enter a valid email"); return; }
     setLoad(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+    const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password: pw });
     setLoad(false);
     if (error) { toast(error.message); return; }
+    if (remember) localStorage.setItem("aurum-remember-email", trimmedEmail);
+    else localStorage.removeItem("aurum-remember-email");
     nav("dashboard");
   };
   return (
@@ -90,7 +98,11 @@ export function Login({ nav }: { nav: (s: string) => void }) {
         <input style={s.input} type={show ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" />
         <button onClick={() => setShow(!show)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 12 }}>{show ? "HIDE" : "SHOW"}</button>
       </div>
-      <div style={{ textAlign: "right", margin: "10px 0 20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "12px 0 20px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: G.text, cursor: "pointer" }}>
+          <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ width: 16, height: 16, accentColor: G.gold, cursor: "pointer" }} />
+          Remember me
+        </label>
         <button onClick={() => nav("forgot")} style={{ background: "none", border: "none", color: G.gold, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Forgot password?</button>
       </div>
       <button style={s.btnGold} onClick={submit} disabled={load}>{load ? "Signing in…" : "Sign in"}</button>
@@ -105,31 +117,58 @@ const CURRENCY_OPTIONS = Array.from(new Set(COUNTRIES.map(c => c.currency))).sor
 
 export function Register({ nav }: { nav: (s: string) => void }) {
   const { s, G, toast } = useAurum();
-  const [name, setName] = useState(""), [email, setEmail] = useState(""), [country, setCountry] = useState(COUNTRIES.find(c => c.code === "US")!);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [country, setCountry] = useState(COUNTRIES.find(c => c.code === "US")!);
   const [currency, setCurrency] = useState("USD");
+  const [language, setLanguage] = useState("en");
   const [phone, setPhone] = useState(""), [pw, setPw] = useState(""), [pw2, setPw2] = useState("");
   const [show, setShow] = useState(false), [load, setLoad] = useState(false);
   const [open, setOpen] = useState(false), [search, setSearch] = useState("");
+  const [langOpen, setLangOpen] = useState(false);
   const filtered = COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   // When country changes, suggest its currency
   useEffect(() => { setCurrency(country.currency); }, [country]);
 
   const submit = async () => {
-    if (!name || !email || !phone || !pw || !pw2) { toast("Please fill all fields"); return; }
+    if (!firstName.trim() || !lastName.trim()) { toast("Enter your first and last name"); return; }
+    if (firstName.length > 50 || lastName.length > 50) { toast("Name too long"); return; }
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { toast("Enter a valid email"); return; }
+    if (!phone || phone.length < 5 || phone.length > 15) { toast("Enter a valid phone number"); return; }
+    if (!pw || !pw2) { toast("Please fill all fields"); return; }
     if (pw !== pw2) { toast("Passwords don't match"); return; }
-    if (pw.length < 6) { toast("Password must be at least 6 characters"); return; }
+    if (pw.length < 8) { toast("Password must be at least 8 characters"); return; }
     setLoad(true);
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
     const { error } = await supabase.auth.signUp({
-      email,
+      email: trimmedEmail,
       password: pw,
       options: {
         emailRedirectTo: `${window.location.origin}/`,
-        data: { full_name: name, country_code: country.code, country_name: country.name, currency, phone: country.dial + phone },
+        data: {
+          full_name: fullName,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          country_code: country.code,
+          country_name: country.name,
+          currency,
+          language,
+          phone: country.dial + phone,
+        },
       },
     });
     setLoad(false);
-    if (error) { toast(error.message); return; }
+    if (error) {
+      if (error.message.toLowerCase().includes("already") || error.message.toLowerCase().includes("registered")) {
+        toast("This email is already registered. Try signing in.");
+      } else {
+        toast(error.message);
+      }
+      return;
+    }
     toast("Account created!");
     nav("dashboard");
   };
@@ -138,8 +177,16 @@ export function Register({ nav }: { nav: (s: string) => void }) {
     <ScreenShell title="Create account." onBack={() => nav("landing")}>
       <p style={{ color: G.muted, fontSize: 14, margin: "0 0 24px" }}>Start your journey to financial clarity.</p>
 
-      <label style={s.label}>FULL NAME</label>
-      <input style={s.input} value={name} onChange={e => setName(e.target.value)} placeholder="Jane Doe" />
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <label style={s.label}>FIRST NAME</label>
+          <input style={s.input} value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" maxLength={50} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={s.label}>LAST NAME</label>
+          <input style={s.input} value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" maxLength={50} />
+        </div>
+      </div>
 
       <label style={{ ...s.label, marginTop: 14 }}>EMAIL</label>
       <input style={s.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -161,10 +208,26 @@ export function Register({ nav }: { nav: (s: string) => void }) {
         </div>
       )}
 
-      <label style={{ ...s.label, marginTop: 14 }}>CURRENCY (locked for 60 days after registration)</label>
+      <label style={{ ...s.label, marginTop: 14 }}>INVESTMENT CURRENCY</label>
       <select style={{ ...s.input, appearance: "none" }} value={currency} onChange={e => setCurrency(e.target.value)}>
         {CURRENCY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
       </select>
+      <p style={{ fontSize: 11, color: G.muted, margin: "6px 2px 0" }}>Auto-set from your country. Locked for 60 days after registration.</p>
+
+      <label style={{ ...s.label, marginTop: 14 }}>LANGUAGE</label>
+      <button onClick={() => setLangOpen(!langOpen)} style={{ ...s.input, textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>{LANGUAGES.find(l => l.code === language)?.native} ({LANGUAGES.find(l => l.code === language)?.name})</span>
+        <span style={{ color: G.muted }}>▾</span>
+      </button>
+      {langOpen && (
+        <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, marginTop: 6, maxHeight: 240, overflowY: "auto" }}>
+          {LANGUAGES.map(l => (
+            <div key={l.code} onClick={() => { setLanguage(l.code); setLangOpen(false); }} style={{ padding: "12px 16px", cursor: "pointer", fontSize: 14, borderBottom: `1px solid ${G.border}`, display: "flex", justifyContent: "space-between" }}>
+              <span>{l.native}</span><span style={{ color: G.muted }}>{l.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <label style={{ ...s.label, marginTop: 14 }}>CONTACT NUMBER</label>
       <div style={{ display: "flex", gap: 8 }}>
@@ -177,6 +240,7 @@ export function Register({ nav }: { nav: (s: string) => void }) {
         <input style={s.input} type={show ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" />
         <button onClick={() => setShow(!show)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 12 }}>{show ? "HIDE" : "SHOW"}</button>
       </div>
+      <p style={{ fontSize: 11, color: G.muted, margin: "6px 2px 0" }}>At least 8 characters. Avoid common passwords.</p>
 
       <label style={{ ...s.label, marginTop: 14 }}>CONFIRM PASSWORD</label>
       <input style={s.input} type={show ? "text" : "password"} value={pw2} onChange={e => setPw2(e.target.value)} placeholder="••••••••" />

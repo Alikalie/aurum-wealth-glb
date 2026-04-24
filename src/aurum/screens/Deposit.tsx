@@ -19,11 +19,19 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    supabase.from("admin_payment_accounts").select("*").eq("is_active", true).eq("method_type", method).then(({ data }) => {
-      setAccounts(data ?? []);
-      setChosen((data ?? [])[0] ?? null);
+    const country = profile?.country_code;
+    let q = supabase.from("admin_payment_accounts").select("*").eq("is_active", true).eq("method_type", method);
+    q.then(({ data }) => {
+      const all = data ?? [];
+      // Prefer country-specific accounts, fall back to global ones (country_code null)
+      const filtered = country
+        ? all.filter((a: any) => !a.country_code || a.country_code === country)
+        : all;
+      const list = filtered.length > 0 ? filtered : all;
+      setAccounts(list);
+      setChosen(list[0] ?? null);
     });
-  }, [method]);
+  }, [method, profile?.country_code]);
 
   const upload = async (file: File) => {
     if (!user) return;
