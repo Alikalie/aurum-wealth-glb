@@ -3,6 +3,8 @@ import { useAurum } from "../AurumContext";
 import { COUNTRIES } from "../data";
 import { ScreenShell, GoogleIcon } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
+import { LANGUAGES } from "@/i18n";
+import { useTranslation } from "react-i18next";
 
 const TICKERS = [
   { sym: "BTC", chg: "+2.4%", up: true }, { sym: "AAPL", chg: "+0.8%", up: true },
@@ -71,13 +73,20 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
 
 export function Login({ nav }: { nav: (s: string) => void }) {
   const { s, G, toast } = useAurum();
-  const [email, setEmail] = useState(""), [pw, setPw] = useState(""), [show, setShow] = useState(false), [load, setLoad] = useState(false);
+  const [email, setEmail] = useState(() => localStorage.getItem("aurum-remember-email") || "");
+  const [pw, setPw] = useState("");
+  const [show, setShow] = useState(false), [load, setLoad] = useState(false);
+  const [remember, setRemember] = useState(() => !!localStorage.getItem("aurum-remember-email"));
   const submit = async () => {
     if (!email || !pw) { toast("Please fill all fields"); return; }
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) { toast("Enter a valid email"); return; }
     setLoad(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+    const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password: pw });
     setLoad(false);
     if (error) { toast(error.message); return; }
+    if (remember) localStorage.setItem("aurum-remember-email", trimmedEmail);
+    else localStorage.removeItem("aurum-remember-email");
     nav("dashboard");
   };
   return (
@@ -90,7 +99,11 @@ export function Login({ nav }: { nav: (s: string) => void }) {
         <input style={s.input} type={show ? "text" : "password"} value={pw} onChange={e => setPw(e.target.value)} placeholder="••••••••" />
         <button onClick={() => setShow(!show)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 12 }}>{show ? "HIDE" : "SHOW"}</button>
       </div>
-      <div style={{ textAlign: "right", margin: "10px 0 20px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "12px 0 20px" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: G.text, cursor: "pointer" }}>
+          <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} style={{ width: 16, height: 16, accentColor: G.gold, cursor: "pointer" }} />
+          Remember me
+        </label>
         <button onClick={() => nav("forgot")} style={{ background: "none", border: "none", color: G.gold, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Forgot password?</button>
       </div>
       <button style={s.btnGold} onClick={submit} disabled={load}>{load ? "Signing in…" : "Sign in"}</button>
