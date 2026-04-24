@@ -311,7 +311,7 @@ function Products() {
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", description: "", image_url: "", price: "", cycle_days: "30", daily_income: "", purchase_limit: "0", resale_enabled: true });
   const refresh = () => supabase.from("products").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
-  useEffect(refresh, []);
+  useEffect(() => { refresh(); }, []);
   const add = async () => {
     if (!form.name || !form.price || !form.daily_income) { toast("Name, price and daily income required"); return; }
     const { error } = await supabase.from("products").insert({
@@ -371,7 +371,7 @@ function AdminAccounts() {
   const [rows, setRows] = useState<any[]>([]);
   const [form, setForm] = useState({ method_type: "mobile_money" as "mobile_money" | "bank" | "paypal", country_code: "", label: "", account_name: "", account_number: "", instructions: "" });
   const refresh = () => supabase.from("admin_payment_accounts").select("*").order("country_code", { ascending: true, nullsFirst: true }).then(({ data }) => setRows(data ?? []));
-  useEffect(refresh, []);
+  useEffect(() => { refresh(); }, []);
   const add = async () => {
     if (!form.label || !form.account_name || !form.account_number) { toast("Fill all required fields"); return; }
     const { error } = await supabase.from("admin_payment_accounts").insert({
