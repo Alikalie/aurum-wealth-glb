@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell, EmptyState } from "../ui";
-import { fmtMoney } from "../data";
+import { fmtMoney, convertFromUsd } from "../data";
 import { supabase } from "@/integrations/supabase/client";
 
 export function MyProducts({ nav }: { nav: (s: string) => void }) {
@@ -14,7 +14,7 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
 
   const refresh = () => {
     if (!user) return;
-    supabase.from("user_products").select("*, products(name, cycle_days, daily_income, resale_enabled)").eq("user_id", user.id).in("status", ["owned", "expired"]).order("purchased_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
+    supabase.from("user_products").select("*, products(name, cycle_days, daily_income, resale_enabled, payout_interval_hours)").eq("user_id", user.id).in("status", ["owned", "expired"]).order("purchased_at", { ascending: false }).then(({ data }) => setItems(data ?? []));
   };
   useEffect(refresh, [user]);
 
@@ -38,7 +38,8 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
     refresh();
   };
 
-  const fmt = (n: number) => fmtMoney(n, cur);
+  // Amounts in user_products / products are stored in USD; convert for display.
+  const fmt = (usd: number) => fmtMoney(convertFromUsd(Number(usd), cur), cur);
 
   return (
     <ScreenShell title="My Products" onBack={() => nav("dashboard")}>
@@ -51,7 +52,12 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
             const cycleDays = it.products?.cycle_days ?? 0;
             const remaining = Math.max(0, cycleDays - it.days_paid);
             const pct = cycleDays > 0 ? Math.min(100, (it.days_paid / cycleDays) * 100) : 0;
-            const nextPayout = it.last_payout_at ? new Date(new Date(it.last_payout_at).getTime() + 24 * 3600 * 1000) : new Date(it.cycle_start_at);
+            const intervalH = Math.max(1, Number(it.products?.payout_interval_hours) || 24);
+            const intervalMs = intervalH * 3600 * 1000;
+            const nextPayout = it.last_payout_at
+              ? new Date(new Date(it.last_payout_at).getTime() + intervalMs)
+              : new Date(new Date(it.cycle_start_at).getTime() + intervalMs);
+            const intervalLabel = intervalH < 24 ? `${intervalH}h` : intervalH === 24 ? "day" : intervalH === 168 ? "week" : `${intervalH / 24}d`;
             return (
               <div key={it.id} style={{ ...s.card, padding: 14 }}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -67,14 +73,14 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
 
                 <div style={{ marginTop: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: G.muted, marginBottom: 4 }}>
-                    <span>Day {it.days_paid}/{cycleDays}</span>
-                    <span>{remaining} days left</span>
+                    <span>Payout {it.days_paid}/{cycleDays}</span>
+                    <span>{remaining} {intervalLabel === "day" ? "days" : intervalLabel === "week" ? "weeks" : intervalLabel} left</span>
                   </div>
                   <div style={{ height: 6, background: G.bg, borderRadius: 3, overflow: "hidden" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: G.gold }} />
                   </div>
                   {it.status === "owned" && (
-                    <Countdown until={nextPayout} G={G} />
+                    <Countdown until={nextPayout} G={G} intervalLabel={intervalLabel} />
                   )}
                 </div>
 
@@ -105,12 +111,24 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
   );
 }
 
-function Countdown({ until, G }: { until: Date; G: any }) {
+function Countdown({ until, G, intervalLabel }: { until: Date; G: any; intervalLabel?: string }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const ms = Math.max(0, until.getTime() - now);
+  const d = Math.floor(ms / (24 * 3600000));
   const h = Math.floor(ms / 3600000);
+  const hh = h % 24;
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
-  return <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Next payout in {h}h {m}m {s}s</div>;
+  const ready = ms <= 0;
+  const text = ready
+    ? "Payout ready — processing soon"
+    : d > 0
+      ? `Next payout in ${d}d ${hh}h ${m}m`
+      : `Next payout in ${h}h ${m}m ${s}s`;
+  return (
+    <div style={{ fontSize: 11, color: ready ? G.green : G.muted, marginTop: 6 }}>
+      {text}{intervalLabel ? ` · every ${intervalLabel}` : ""}
+    </div>
+  );
 }

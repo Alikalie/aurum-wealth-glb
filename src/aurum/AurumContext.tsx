@@ -3,6 +3,7 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { PALETTES, buildStyles, ThemeMode } from "./theme";
 import i18n from "@/i18n";
+import { loadFxRates } from "./data";
 
 export type Profile = {
   id: string;
@@ -92,6 +93,7 @@ export function AurumProvider({ children }: { children: ReactNode }) {
       setUser(data.session?.user ?? null);
       setLoading(false);
     });
+    loadFxRates(supabase).catch(() => {});
     return () => sub.subscription.unsubscribe();
   }, []);
 

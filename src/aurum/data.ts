@@ -64,3 +64,36 @@ export const fmtMoney = (amount: number, currency = "USD") => {
     return `${currency} ${amount.toFixed(2)}`;
   }
 };
+
+// ===== FX conversion =====
+// Cached USD->currency rate map. Loaded once per session.
+let _rates: Record<string, number> | null = null;
+let _ratesPromise: Promise<Record<string, number>> | null = null;
+
+export async function loadFxRates(supabase: any): Promise<Record<string, number>> {
+  if (_rates) return _rates;
+  if (_ratesPromise) return _ratesPromise;
+  _ratesPromise = supabase.from("fx_rates").select("currency,rate").then(({ data }: any) => {
+    const map: Record<string, number> = { USD: 1 };
+    (data ?? []).forEach((r: any) => { map[r.currency] = Number(r.rate); });
+    _rates = map;
+    return map;
+  });
+  return _ratesPromise;
+}
+
+export function fxRatesSync(): Record<string, number> {
+  return _rates ?? { USD: 1 };
+}
+
+/** Convert an amount in USD to the target currency using cached rates. */
+export function convertFromUsd(usdAmount: number, currency: string): number {
+  const r = (_rates ?? { USD: 1 })[currency];
+  if (!r || !isFinite(r)) return usdAmount;
+  return usdAmount * r;
+}
+
+/** Format a USD-priced amount in the user's currency. */
+export function fmtUsdAs(usdAmount: number, currency = "USD") {
+  return fmtMoney(convertFromUsd(usdAmount, currency), currency);
+}

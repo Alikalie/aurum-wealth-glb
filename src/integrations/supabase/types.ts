@@ -143,6 +143,24 @@ export type Database = {
           },
         ]
       }
+      fx_rates: {
+        Row: {
+          currency: string
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          currency: string
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          currency?: string
+          rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           account_holder_name: string
@@ -211,6 +229,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           name: string
+          payout_interval_hours: number
           price: number
           purchase_limit: number
           resale_enabled: boolean
@@ -226,6 +245,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name: string
+          payout_interval_hours?: number
           price: number
           purchase_limit?: number
           resale_enabled?: boolean
@@ -241,6 +261,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name?: string
+          payout_interval_hours?: number
           price?: number
           purchase_limit?: number
           resale_enabled?: boolean
