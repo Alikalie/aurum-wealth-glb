@@ -250,20 +250,6 @@ function Deposits() {
   );
 }
 
-function ProofModal({ url, onClose }: { url: string; onClose: () => void }) {
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#000d", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: "#111", borderRadius: 14, padding: 14, maxWidth: 700, maxHeight: "90vh", overflow: "auto" }}>
-        <img src={url} alt="Proof" style={{ maxWidth: "100%", display: "block" }} />
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <a href={url} target="_blank" rel="noreferrer" style={{ flex: 1, padding: 10, textAlign: "center", background: "transparent", color: "#C89633", border: "1px solid #C89633", borderRadius: 8, textDecoration: "none" }}>Open in new tab</a>
-          <a href={url} download style={{ flex: 1, padding: 10, textAlign: "center", background: "#C89633", color: "#1a1208", borderRadius: 8, textDecoration: "none", fontWeight: 700 }}>Download</a>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Withdrawals() {
   const { s, G, toast } = useAurum();
   const [rows, setRows] = useState<any[]>([]);
