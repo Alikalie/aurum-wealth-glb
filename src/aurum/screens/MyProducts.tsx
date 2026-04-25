@@ -132,4 +132,3 @@ function Countdown({ until, G, intervalLabel }: { until: Date; G: any; intervalL
     </div>
   );
 }
-}
