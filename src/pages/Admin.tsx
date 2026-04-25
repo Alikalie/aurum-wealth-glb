@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { AurumProvider, useAurum } from "@/aurum/AurumContext";
 import { Toast } from "@/aurum/ui";
-import { COUNTRIES, fmtMoney } from "@/aurum/data";
+import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
+import { ProofViewer } from "@/aurum/ProofViewer";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "content";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content";
 
 function AdminInner() {
   const { s, G, user, isAdmin, loading, signOut } = useAurum();
@@ -16,7 +17,7 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "content"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "content"];
   return (
     <div style={{ ...s.app, padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -34,6 +35,7 @@ function AdminInner() {
         {tab === "withdrawals" && <Withdrawals />}
         {tab === "products" && <Products />}
         {tab === "accounts" && <AdminAccounts />}
+        {tab === "fx" && <FxRates />}
         {tab === "content" && <ContentEditor />}
         <Toast />
       </div>
