@@ -244,7 +244,7 @@ function Deposits() {
           </div>
         ))}
       </div>
-      {proofUrl && <ProofModal url={proofUrl} onClose={() => setProofUrl(null)} />}
+      {proofUrl && <ProofViewer url={proofUrl} onClose={() => setProofUrl(null)} G={G} />}
       {rejectFor && <RejectModal target={rejectFor} onClose={() => setRejectFor(null)} onDone={refresh} />}
     </div>
   );
