@@ -201,16 +201,17 @@ function Deposits() {
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [rejectFor, setRejectFor] = useState<{ id: string; kind: "deposit" } | null>(null);
   const refresh = () => {
-    let q = supabase.from("deposits").select("*, profiles!inner(full_name, email, account_number, currency)").order("created_at", { ascending: false });
+    let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
     q.then(({ data }) => setRows(data ?? []));
   };
   useEffect(refresh, [filter]);
-  const review = async (id: string, status: "approved" | "rejected") => {
-    const { error } = await supabase.from("deposits").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
+  const approve = async (id: string) => {
+    const { error } = await supabase.from("deposits").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast(error.message); return; }
-    toast(`Deposit ${status}`); refresh();
+    toast("Deposit approved — credited to user's invested balance"); refresh();
   };
   return (
     <div>
@@ -228,19 +229,21 @@ function Deposits() {
                 <div style={{ fontWeight: 600 }}>#{r.profiles?.account_number} {r.profiles?.full_name} <span style={{ color: G.muted, fontWeight: 400 }}>({r.profiles?.email})</span></div>
                 <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · {r.method_type} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                 {r.proof_url && <button onClick={() => setProofUrl(r.proof_url)} style={{ background: "none", border: "none", color: G.gold, fontSize: 12, cursor: "pointer", marginTop: 4, padding: 0 }}>📎 View proof</button>}
+                {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
               </div>
               <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>{fmtMoney(Number(r.amount), r.profiles?.currency)}</div>
             </div>
             {r.status === "pending" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => review(r.id, "approved")}>Approve</button>
-                <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => review(r.id, "rejected")}>Reject</button>
+                <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => approve(r.id)}>Approve & credit</button>
+                <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => setRejectFor({ id: r.id, kind: "deposit" })}>Decline…</button>
               </div>
             )}
           </div>
         ))}
       </div>
       {proofUrl && <ProofModal url={proofUrl} onClose={() => setProofUrl(null)} />}
+      {rejectFor && <RejectModal target={rejectFor} onClose={() => setRejectFor(null)} onDone={refresh} />}
     </div>
   );
 }
@@ -263,16 +266,17 @@ function Withdrawals() {
   const { s, G, toast } = useAurum();
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [rejectFor, setRejectFor] = useState<{ id: string; kind: "withdrawal" } | null>(null);
   const refresh = () => {
-    let q = supabase.from("withdrawals").select("*, profiles!inner(full_name, email, account_number, currency), payment_methods(method_type, provider_name, account_number, paypal_email, account_holder_name)").order("created_at", { ascending: false });
+    let q = supabase.from("withdrawals").select("*, profiles!withdrawals_user_profile_fkey(full_name, email, account_number, currency), payment_methods(method_type, provider_name, account_number, paypal_email, account_holder_name)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
     q.then(({ data }) => setRows(data ?? []));
   };
   useEffect(refresh, [filter]);
-  const review = async (id: string, status: "approved" | "rejected") => {
-    const { error } = await supabase.from("withdrawals").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
+  const approve = async (id: string) => {
+    const { error } = await supabase.from("withdrawals").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast(error.message); return; }
-    toast(`Withdrawal ${status}`); refresh();
+    toast("Withdrawal marked paid"); refresh();
   };
   return (
     <div>
@@ -290,17 +294,47 @@ function Withdrawals() {
                 <div style={{ fontWeight: 600 }}>#{r.profiles?.account_number} {r.profiles?.full_name} <span style={{ color: G.muted, fontWeight: 400 }}>({r.profiles?.email})</span></div>
                 <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                 <div style={{ fontSize: 12, marginTop: 4 }}>To: {r.payment_methods?.method_type} · {r.payment_methods?.provider_name || "PayPal"} · {r.payment_methods?.account_number || r.payment_methods?.paypal_email} ({r.payment_methods?.account_holder_name})</div>
+                {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
               </div>
               <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>{fmtMoney(Number(r.amount), r.profiles?.currency)}</div>
             </div>
             {r.status === "pending" && (
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-                <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => review(r.id, "approved")}>Mark Paid</button>
-                <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => review(r.id, "rejected")}>Reject</button>
+                <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => approve(r.id)}>Mark Paid</button>
+                <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => setRejectFor({ id: r.id, kind: "withdrawal" })}>Decline…</button>
               </div>
             )}
           </div>
         ))}
+      </div>
+      {rejectFor && <RejectModal target={rejectFor} onClose={() => setRejectFor(null)} onDone={refresh} />}
+    </div>
+  );
+}
+
+function RejectModal({ target, onClose, onDone }: { target: { id: string; kind: "deposit" | "withdrawal" }; onClose: () => void; onDone: () => void }) {
+  const { s, G, toast } = useAurum();
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async () => {
+    if (!note.trim()) { toast("Please add a reason for the user"); return; }
+    setBusy(true);
+    const table = target.kind === "deposit" ? "deposits" : "withdrawals";
+    const { error } = await supabase.from(table).update({ status: "rejected", admin_note: note.trim(), reviewed_at: new Date().toISOString() }).eq("id", target.id);
+    setBusy(false);
+    if (error) { toast(error.message); return; }
+    toast("Declined and user notified"); onDone(); onClose();
+  };
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: G.card, borderRadius: 14, padding: 20, maxWidth: 440, width: "100%", border: `1px solid ${G.border}` }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Decline {target.kind}</div>
+        <div style={{ fontSize: 12, color: G.muted, marginBottom: 12 }}>Write a clear reason — the user will see this message in their transaction history.</div>
+        <textarea autoFocus style={{ ...s.input, minHeight: 100, fontFamily: "inherit" }} placeholder="e.g. Proof image is unclear, please re-submit with a readable screenshot." value={note} onChange={e => setNote(e.target.value)} />
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button style={s.btnGhost} onClick={onClose}>Cancel</button>
+          <button style={{ ...s.btnGold, background: G.red, color: "#fff" }} onClick={submit} disabled={busy}>{busy ? "Sending…" : "Decline & notify"}</button>
+        </div>
       </div>
     </div>
   );
