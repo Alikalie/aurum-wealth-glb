@@ -111,12 +111,25 @@ export function MyProducts({ nav }: { nav: (s: string) => void }) {
   );
 }
 
-function Countdown({ until, G }: { until: Date; G: any }) {
+function Countdown({ until, G, intervalLabel }: { until: Date; G: any; intervalLabel?: string }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const ms = Math.max(0, until.getTime() - now);
+  const d = Math.floor(ms / (24 * 3600000));
   const h = Math.floor(ms / 3600000);
+  const hh = h % 24;
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
-  return <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Next payout in {h}h {m}m {s}s</div>;
+  const ready = ms <= 0;
+  const text = ready
+    ? "Payout ready — processing soon"
+    : d > 0
+      ? `Next payout in ${d}d ${hh}h ${m}m`
+      : `Next payout in ${h}h ${m}m ${s}s`;
+  return (
+    <div style={{ fontSize: 11, color: ready ? G.green : G.muted, marginTop: 6 }}>
+      {text}{intervalLabel ? ` · every ${intervalLabel}` : ""}
+    </div>
+  );
+}
 }
