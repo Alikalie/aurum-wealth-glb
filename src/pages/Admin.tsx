@@ -331,37 +331,75 @@ function RejectModal({ target, onClose, onDone }: { target: { id: string; kind: 
 function Products() {
   const { s, G, toast } = useAurum();
   const [rows, setRows] = useState<any[]>([]);
-  const [form, setForm] = useState({ name: "", description: "", image_url: "", price: "", cycle_days: "30", daily_income: "", purchase_limit: "0", resale_enabled: true });
+  const [form, setForm] = useState({
+    name: "", description: "", image_url: "",
+    price_usd: "", cycle_days: "30", payout_interval_hours: "24",
+    daily_income_usd: "", purchase_limit: "0", resale_enabled: true,
+  });
+  const [previewCur, setPreviewCur] = useState("EUR");
   const refresh = () => supabase.from("products").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
   useEffect(() => { refresh(); }, []);
   const add = async () => {
-    if (!form.name || !form.price || !form.daily_income) { toast("Name, price and daily income required"); return; }
+    if (!form.name || !form.price_usd || !form.daily_income_usd) { toast("Name, price and income required"); return; }
+    const price = Number(form.price_usd);
+    const income = Number(form.daily_income_usd);
+    const cycle = Number(form.cycle_days);
+    const interval = Math.max(1, Number(form.payout_interval_hours) || 24);
     const { error } = await supabase.from("products").insert({
       name: form.name, description: form.description, image_url: form.image_url || null,
-      price: Number(form.price), cycle_days: Number(form.cycle_days), daily_income: Number(form.daily_income),
+      price, cycle_days: cycle, daily_income: income,
+      payout_interval_hours: interval,
       purchase_limit: Number(form.purchase_limit), resale_enabled: form.resale_enabled,
-      expected_return_pct: ((Number(form.daily_income) * Number(form.cycle_days)) / Number(form.price)) * 100,
+      expected_return_pct: price > 0 ? (income * cycle / price) * 100 : 0,
     });
     if (error) { toast(error.message); return; }
-    setForm({ name: "", description: "", image_url: "", price: "", cycle_days: "30", daily_income: "", purchase_limit: "0", resale_enabled: true });
+    setForm({ name: "", description: "", image_url: "", price_usd: "", cycle_days: "30", payout_interval_hours: "24", daily_income_usd: "", purchase_limit: "0", resale_enabled: true });
     refresh();
   };
   const toggle = async (r: any) => { await supabase.from("products").update({ is_active: !r.is_active }).eq("id", r.id); refresh(); };
   const del = async (id: string) => { if (confirm("Delete?")) { await supabase.from("products").delete().eq("id", id); refresh(); } };
 
+  const intervalOptions: { v: string; l: string }[] = [
+    { v: "1", l: "Every hour" },
+    { v: "6", l: "Every 6 hours" },
+    { v: "12", l: "Every 12 hours" },
+    { v: "24", l: "Daily (24h)" },
+    { v: "168", l: "Weekly (7d)" },
+  ];
+  const previewPrice = Number(form.price_usd) || 0;
+  const previewIncome = Number(form.daily_income_usd) || 0;
+
   return (
     <div>
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ ...s.serif, fontSize: 18, marginBottom: 10 }}>Add Product</div>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Add Product</div>
+        <div style={{ fontSize: 12, color: G.muted, marginBottom: 12 }}>Enter all amounts in <strong style={{ color: G.gold }}>USD</strong>. The app converts to each user's local currency automatically.</div>
         <input style={s.input} placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
         <textarea style={{ ...s.input, marginTop: 8, minHeight: 60, fontFamily: "inherit" }} placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
         <input style={{ ...s.input, marginTop: 8 }} placeholder="Image URL (optional)" value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
-          <input style={s.input} placeholder="Price" type="number" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
-          <input style={s.input} placeholder="Cycle days" type="number" value={form.cycle_days} onChange={e => setForm({ ...form, cycle_days: e.target.value })} />
-          <input style={s.input} placeholder="Daily income" type="number" value={form.daily_income} onChange={e => setForm({ ...form, daily_income: e.target.value })} />
-          <input style={s.input} placeholder="Purchase limit (0=∞)" type="number" value={form.purchase_limit} onChange={e => setForm({ ...form, purchase_limit: e.target.value })} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
+          <Field label="Price (USD)"><input style={s.input} type="number" value={form.price_usd} onChange={e => setForm({ ...form, price_usd: e.target.value })} /></Field>
+          <Field label="Income / payout (USD)"><input style={s.input} type="number" value={form.daily_income_usd} onChange={e => setForm({ ...form, daily_income_usd: e.target.value })} /></Field>
+          <Field label="Payout interval">
+            <select style={{ ...s.input, appearance: "none" }} value={form.payout_interval_hours} onChange={e => setForm({ ...form, payout_interval_hours: e.target.value })}>
+              {intervalOptions.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </Field>
+          <Field label="Cycle (number of payouts)"><input style={s.input} type="number" value={form.cycle_days} onChange={e => setForm({ ...form, cycle_days: e.target.value })} /></Field>
+          <Field label="Purchase limit (0=∞)"><input style={s.input} type="number" value={form.purchase_limit} onChange={e => setForm({ ...form, purchase_limit: e.target.value })} /></Field>
         </div>
+        {previewPrice > 0 && (
+          <div style={{ marginTop: 10, padding: 10, background: G.bg, borderRadius: 8, border: `1px solid ${G.border}`, fontSize: 12, color: G.muted, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span>Preview in</span>
+            <select value={previewCur} onChange={e => setPreviewCur(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "4px 8px", borderRadius: 6, fontSize: 12 }}>
+              {Object.keys(fxRatesSync()).sort().map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <span>·</span>
+            <span style={{ color: G.text }}>Price: <strong style={{ color: G.gold }}>{fmtMoney(convertFromUsd(previewPrice, previewCur), previewCur)}</strong></span>
+            <span>·</span>
+            <span style={{ color: G.text }}>Income: <strong style={{ color: G.green }}>{fmtMoney(convertFromUsd(previewIncome, previewCur), previewCur)}</strong></span>
+          </div>
+        )}
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, cursor: "pointer" }}>
           <input type="checkbox" checked={form.resale_enabled} onChange={e => setForm({ ...form, resale_enabled: e.target.checked })} style={{ accentColor: G.gold }} />
           Allow resale on marketplace
@@ -374,7 +412,9 @@ function Products() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 600 }}>{r.name} {!r.is_active && <span style={{ color: G.muted, fontSize: 11 }}>(hidden)</span>}</div>
-                <div style={{ fontSize: 12, color: G.muted }}>${Number(r.price).toFixed(2)} · {r.cycle_days}d × ${Number(r.daily_income).toFixed(2)}/day · limit {r.purchase_limit || "∞"} · resale {r.resale_enabled ? "✓" : "✗"}</div>
+                <div style={{ fontSize: 12, color: G.muted }}>
+                  ${Number(r.price).toFixed(2)} USD · {r.cycle_days}× ${Number(r.daily_income).toFixed(2)} every {payoutLabel(r.payout_interval_hours)} · limit {r.purchase_limit || "∞"} · resale {r.resale_enabled ? "✓" : "✗"}
+                </div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button style={{ background: "transparent", color: G.text, border: `1px solid ${G.border}`, padding: "4px 8px", borderRadius: 6, fontSize: 11, cursor: "pointer" }} onClick={() => toggle(r)}>{r.is_active ? "Hide" : "Show"}</button>
@@ -383,6 +423,94 @@ function Products() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const { G } = useAurum();
+  return (
+    <div>
+      <div style={{ fontSize: 10, color: G.muted, letterSpacing: 0.5, marginBottom: 4 }}>{label.toUpperCase()}</div>
+      {children}
+    </div>
+  );
+}
+
+function payoutLabel(h: number | null | undefined): string {
+  const v = Number(h) || 24;
+  if (v < 24) return `${v}h`;
+  if (v === 24) return "day";
+  if (v === 168) return "week";
+  if (v % 24 === 0) return `${v / 24}d`;
+  return `${v}h`;
+}
+
+function FxRates() {
+  const { s, G, toast } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [editing, setEditing] = useState<Record<string, string>>({});
+  const [newCur, setNewCur] = useState({ currency: "", rate: "" });
+  const refresh = () => supabase.from("fx_rates").select("*").order("currency").then(({ data }) => setRows(data ?? []));
+  useEffect(() => { refresh(); }, []);
+
+  const save = async (currency: string) => {
+    const v = Number(editing[currency]);
+    if (!v || v <= 0) { toast("Rate must be positive"); return; }
+    const { error } = await supabase.from("fx_rates").update({ rate: v, updated_at: new Date().toISOString() }).eq("currency", currency);
+    if (error) { toast(error.message); return; }
+    toast("Rate saved");
+    setEditing(e => { const n = { ...e }; delete n[currency]; return n; });
+    refresh();
+  };
+
+  const add = async () => {
+    const c = newCur.currency.trim().toUpperCase();
+    const r = Number(newCur.rate);
+    if (!c || !r || r <= 0) { toast("Currency code + positive rate required"); return; }
+    const { error } = await supabase.from("fx_rates").upsert({ currency: c, rate: r, updated_at: new Date().toISOString() });
+    if (error) { toast(error.message); return; }
+    setNewCur({ currency: "", rate: "" });
+    refresh();
+  };
+
+  return (
+    <div>
+      <div style={{ ...s.card, marginBottom: 16 }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Currency Rates</div>
+        <div style={{ fontSize: 12, color: G.muted, marginBottom: 10 }}>How many units of each currency equal <strong style={{ color: G.gold }}>1 USD</strong>. Used to display product prices and incomes in each user's local currency.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 100px", gap: 8 }}>
+          <input style={s.input} placeholder="Currency code (e.g. EUR)" value={newCur.currency} onChange={e => setNewCur({ ...newCur, currency: e.target.value })} />
+          <input style={s.input} placeholder="Rate (units per 1 USD)" type="number" value={newCur.rate} onChange={e => setNewCur({ ...newCur, rate: e.target.value })} />
+          <button style={s.btnGold} onClick={add}>Add / Update</button>
+        </div>
+      </div>
+      <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 110px", padding: "10px 14px", background: G.bg, fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>
+          <span>CODE</span><span>RATE (per $1)</span><span>UPDATED</span><span></span>
+        </div>
+        {rows.map(r => {
+          const isEd = editing[r.currency] !== undefined;
+          return (
+            <div key={r.currency} style={{ display: "grid", gridTemplateColumns: "100px 1fr 1fr 110px", padding: "10px 14px", borderTop: `1px solid ${G.border}`, alignItems: "center", fontSize: 13 }}>
+              <span style={{ fontFamily: "monospace", color: G.gold, fontWeight: 700 }}>{r.currency}</span>
+              <span>
+                {isEd ? (
+                  <input style={{ ...s.input, padding: "6px 10px", fontSize: 13 }} type="number" value={editing[r.currency]} onChange={e => setEditing({ ...editing, [r.currency]: e.target.value })} />
+                ) : Number(r.rate).toLocaleString()}
+              </span>
+              <span style={{ fontSize: 11, color: G.muted }}>{new Date(r.updated_at).toLocaleDateString()}</span>
+              <span>
+                {isEd ? (
+                  <button onClick={() => save(r.currency)} style={{ background: G.gold, color: "#1a1208", border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 700 }}>Save</button>
+                ) : (
+                  <button onClick={() => setEditing({ ...editing, [r.currency]: String(r.rate) })} style={{ background: "transparent", color: G.text, border: `1px solid ${G.border}`, borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer" }}>Edit</button>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
