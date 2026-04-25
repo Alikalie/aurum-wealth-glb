@@ -134,6 +134,13 @@ export type Database = {
             referencedRelation: "admin_payment_accounts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "deposits_user_profile_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       payment_methods: {
@@ -497,6 +504,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "payment_methods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withdrawals_user_profile_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
