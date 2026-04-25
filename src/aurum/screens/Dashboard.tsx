@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
-import { fmtMoney } from "../data";
+import { fmtMoney, convertFromUsd } from "../data";
 import { EmptyState, NavIcon } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
@@ -117,7 +117,11 @@ function MarketsTab() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {products.map(p => {
-            const totalReturn = Number(p.daily_income) * Number(p.cycle_days);
+            const priceLocal = convertFromUsd(Number(p.price), cur);
+            const dailyLocal = convertFromUsd(Number(p.daily_income), cur);
+            const totalReturn = dailyLocal * Number(p.cycle_days);
+            const intervalH = Number(p.payout_interval_hours) || 24;
+            const intervalLabel = intervalH < 24 ? `${intervalH}h` : intervalH === 24 ? "day" : intervalH === 168 ? "week" : `${intervalH / 24}d`;
             return (
               <div key={p.id} style={{ ...s.card, padding: 16 }}>
                 {p.image_url && <img src={p.image_url} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 12, marginBottom: 12 }} />}
@@ -126,11 +130,11 @@ function MarketsTab() {
                     <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{p.name}</div>
                     {p.description && <div style={{ fontSize: 12, color: G.muted, marginTop: 4, lineHeight: 1.5 }}>{p.description}</div>}
                   </div>
-                  <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, color: G.gold }}>{fmtMoney(Number(p.price), cur)}</div>
+                  <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, color: G.gold }}>{fmtMoney(priceLocal, cur)}</div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 12, padding: "10px 0", borderTop: `1px solid ${G.border}`, borderBottom: `1px solid ${G.border}` }}>
-                  <Stat label="Cycle" value={`${p.cycle_days}d`} G={G} />
-                  <Stat label="Daily" value={fmtMoney(Number(p.daily_income), cur)} G={G} />
+                  <Stat label="Cycle" value={`${p.cycle_days}× ${intervalLabel}`} G={G} />
+                  <Stat label={`Per ${intervalLabel}`} value={fmtMoney(dailyLocal, cur)} G={G} />
                   <Stat label="Total" value={fmtMoney(totalReturn, cur)} G={G} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
