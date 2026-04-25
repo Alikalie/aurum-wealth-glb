@@ -3,6 +3,7 @@ import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { fmtMoney } from "../data";
 import { supabase } from "@/integrations/supabase/client";
+import { ProofViewer } from "../ProofViewer";
 
 type Props = { nav: (s: string) => void; txId?: string | null };
 
@@ -12,6 +13,7 @@ export function TransactionDetails({ nav, txId }: Props) {
   const [tx, setTx] = useState<any>(null);
   const [related, setRelated] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [viewProof, setViewProof] = useState(false);
 
   useEffect(() => {
     if (!txId) { setLoading(false); return; }
@@ -31,18 +33,6 @@ export function TransactionDetails({ nav, txId }: Props) {
     })();
   }, [txId]);
 
-  const downloadProof = async (url: string) => {
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = url.split("/").pop() || "proof";
-      a.click();
-      URL.revokeObjectURL(a.href);
-    } catch { toast("Could not download"); }
-  };
-
   if (loading) return <ScreenShell title="Transaction" onBack={() => nav("transactions")}><div style={{ color: G.muted }}>Loading…</div></ScreenShell>;
   if (!tx) return <ScreenShell title="Transaction" onBack={() => nav("transactions")}><div style={{ color: G.muted }}>Not found.</div></ScreenShell>;
 
@@ -52,6 +42,7 @@ export function TransactionDetails({ nav, txId }: Props) {
     product_sale: "Product sale", cycle_complete: "Cycle complete",
   };
   const proofUrl = related?.proof_url;
+  const proofName = proofUrl ? (() => { try { return decodeURIComponent(proofUrl.split("/").pop() || "proof"); } catch { return "proof"; } })() : null;
   const positive = Number(tx.amount) >= 0;
 
   return (
@@ -86,15 +77,16 @@ export function TransactionDetails({ nav, txId }: Props) {
       {proofUrl && (
         <div style={{ marginTop: 14 }}>
           <div style={{ fontSize: 12, color: G.muted, marginBottom: 8, letterSpacing: 0.5 }}>PAYMENT PROOF</div>
-          <div style={{ ...s.card, padding: 8 }}>
+          <button onClick={() => setViewProof(true)} style={{ ...s.card, padding: 8, width: "100%", border: `1px solid ${G.border}`, cursor: "pointer", textAlign: "left" as const }}>
             <img src={proofUrl} alt="Payment proof" style={{ width: "100%", borderRadius: 12, display: "block" }} onError={(e) => ((e.target as HTMLImageElement).style.display = "none")} />
-          </div>
-          <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <a href={proofUrl} target="_blank" rel="noreferrer" style={{ ...s.btnGhost, textDecoration: "none", textAlign: "center", display: "block", lineHeight: "1.4" }}>Open</a>
-            <button style={s.btnGold} onClick={() => downloadProof(proofUrl)}>Download</button>
-          </div>
+            <div style={{ fontSize: 11, color: G.muted, marginTop: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>📎 {proofName}</span>
+              <span style={{ color: G.gold, fontWeight: 600 }}>Tap to zoom →</span>
+            </div>
+          </button>
         </div>
       )}
+      {proofUrl && viewProof && <ProofViewer url={proofUrl} filename={proofName ?? undefined} onClose={() => setViewProof(false)} G={G} />}
     </ScreenShell>
   );
 }
