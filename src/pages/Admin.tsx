@@ -206,6 +206,9 @@ function Deposits() {
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<{ id: string; kind: "deposit" } | null>(null);
+  const [fCurrency, setFCurrency] = useState("");
+  const [fMethod, setFMethod] = useState("");
+  const [fCountry, setFCountry] = useState("");
   const refresh = () => {
     let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
@@ -213,10 +216,20 @@ function Deposits() {
   };
   useEffect(refresh, [filter]);
   const approve = async (id: string) => {
-    const { error } = await supabase.from("deposits").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("deposits").update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", id);
     if (error) { toast(error.message); return; }
     toast("Deposit approved — credited to user's invested balance"); refresh();
   };
+  const filtered = rows.filter(r => {
+    if (fCurrency && (r.profiles?.currency || "") !== fCurrency) return false;
+    if (fMethod && r.method_type !== fMethod) return false;
+    if (fCountry) {
+      // need country lookup — fetched via separate join? we don't have it; skip
+    }
+    return true;
+  });
+  const currencies = Array.from(new Set(rows.map(r => r.profiles?.currency).filter(Boolean))).sort();
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -224,9 +237,23 @@ function Deposits() {
           <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.gold : G.card, color: filter === f ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{f.toUpperCase()}</button>
         ))}
       </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All currencies</option>
+          {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={fMethod} onChange={e => setFMethod(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All methods</option>
+          <option value="mobile_money">Mobile money</option>
+          <option value="bank">Bank</option>
+          <option value="paypal">PayPal</option>
+        </select>
+        {(fCurrency || fMethod) && <button onClick={() => { setFCurrency(""); setFMethod(""); }} style={{ background: "transparent", color: G.muted, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Clear filters</button>}
+        <span style={{ alignSelf: "center", fontSize: 11, color: G.muted }}>{filtered.length} of {rows.length}</span>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No deposits.</div>}
-        {rows.map(r => (
+        {filtered.length === 0 && <div style={{ ...s.card, color: G.muted }}>No deposits match.</div>}
+        {filtered.map(r => (
           <div key={r.id} style={{ ...s.card, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>
