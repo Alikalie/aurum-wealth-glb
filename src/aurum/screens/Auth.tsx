@@ -4,6 +4,7 @@ import { COUNTRIES } from "../data";
 import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
+import { NewsFeed } from "./NewsFeed";
 
 const TICKERS = [
   { sym: "BTC", chg: "+2.4%", up: true }, { sym: "AAPL", chg: "+0.8%", up: true },
@@ -25,14 +26,19 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
       <div style={{ position: "relative", padding: "32px 22px 24px" }}>
         <div style={{ position: "absolute", top: -50, left: "50%", transform: "translateX(-50%)", width: 500, height: 400, background: `radial-gradient(circle, ${G.gold}33 0%, transparent 60%)`, pointerEvents: "none" }} />
         <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${G.gold}, ${G.gold}99)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#1a1208", fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, fontStyle: "italic" }}>A</div>
+            <div style={{ ...s.serif, fontSize: 24, fontWeight: 700, letterSpacing: 0.5 }}>Aurum</div>
+            <span style={{ fontSize: 10, color: G.muted, letterSpacing: 1.5, marginLeft: 4, paddingTop: 6 }}>WEALTH</span>
+          </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: G.card, border: `1px solid ${G.border}`, borderRadius: 20, padding: "6px 12px", fontSize: 11, letterSpacing: 0.6, color: G.muted }}>
             <span style={{ width: 6, height: 6, borderRadius: 3, background: G.gold }} />
             TRUSTED BY 180K+ INVESTORS
           </div>
-          <h1 style={{ ...s.serif, fontSize: 42, lineHeight: 1.1, margin: "20px 0 14px", fontWeight: 600 }}>
-            Grow your <em style={{ color: G.gold, fontStyle: "italic" }}>wealth</em> with clarity.
+          <h1 style={{ ...s.serif, fontSize: 40, lineHeight: 1.05, margin: "20px 0 14px", fontWeight: 600 }}>
+            Welcome to <em style={{ color: G.gold, fontStyle: "italic" }}>Aurum</em>
           </h1>
-          <p style={{ color: G.muted, fontSize: 15, lineHeight: 1.5, margin: 0 }}>The investment platform built for serious investors who value precision, security, and beautiful design.</p>
+          <p style={{ color: G.muted, fontSize: 15, lineHeight: 1.55, margin: 0 }}>Grow your wealth with clarity. Daily-earning investment cycles, instant deposits & withdrawals — built for investors who value precision.</p>
         </div>
       </div>
 
@@ -49,6 +55,10 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         <button style={s.btnGold} onClick={() => nav("register")}>Create free account</button>
         <button style={s.btnGhost} onClick={() => nav("login")}>Sign in to Aurum</button>
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
+      </div>
+
+      <div style={{ padding: "32px 22px 0" }}>
+        <NewsFeed />
       </div>
 
       <div style={{ padding: "40px 22px 60px" }}>
