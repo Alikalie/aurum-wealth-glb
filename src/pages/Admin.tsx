@@ -5,7 +5,7 @@ import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "audit";
 
 function AdminInner() {
   const { s, G, user, isAdmin, loading, signOut } = useAurum();
@@ -17,7 +17,7 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "content"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "content", "audit"];
   return (
     <div style={{ ...s.app, padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -37,6 +37,8 @@ function AdminInner() {
         {tab === "accounts" && <AdminAccounts />}
         {tab === "fx" && <FxRates />}
         {tab === "content" && <ContentEditor />}
+        {tab === "news" && <NewsAdmin />}
+        {tab === "audit" && <AuditLog />}
         <Toast />
       </div>
     </div>
@@ -204,17 +206,29 @@ function Deposits() {
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [rejectFor, setRejectFor] = useState<{ id: string; kind: "deposit" } | null>(null);
+  const [fCurrency, setFCurrency] = useState("");
+  const [fMethod, setFMethod] = useState("");
+  const [fCountry, setFCountry] = useState("");
   const refresh = () => {
-    let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency)").order("created_at", { ascending: false });
+    let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency, country_name, country_code)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
     q.then(({ data }) => setRows(data ?? []));
   };
   useEffect(refresh, [filter]);
   const approve = async (id: string) => {
-    const { error } = await supabase.from("deposits").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("deposits").update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", id);
     if (error) { toast(error.message); return; }
     toast("Deposit approved — credited to user's invested balance"); refresh();
   };
+  const filtered = rows.filter(r => {
+    if (fCurrency && (r.profiles?.currency || "") !== fCurrency) return false;
+    if (fMethod && r.method_type !== fMethod) return false;
+    if (fCountry && (r.profiles?.country_code || "") !== fCountry) return false;
+    return true;
+  });
+  const currencies = Array.from(new Set(rows.map(r => r.profiles?.currency).filter(Boolean))).sort();
+  const countries = Array.from(new Set(rows.map(r => r.profiles?.country_code).filter(Boolean))).sort();
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -222,9 +236,27 @@ function Deposits() {
           <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.gold : G.card, color: filter === f ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{f.toUpperCase()}</button>
         ))}
       </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All currencies</option>
+          {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={fMethod} onChange={e => setFMethod(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All methods</option>
+          <option value="mobile_money">Mobile money</option>
+          <option value="bank">Bank</option>
+          <option value="paypal">PayPal</option>
+        </select>
+        <select value={fCountry} onChange={e => setFCountry(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All countries</option>
+          {countries.map(c => { const cn = COUNTRIES.find(x => x.code === c); return <option key={c} value={c}>{cn ? `${cn.flag} ${cn.name}` : c}</option>; })}
+        </select>
+        {(fCurrency || fMethod || fCountry) && <button onClick={() => { setFCurrency(""); setFMethod(""); setFCountry(""); }} style={{ background: "transparent", color: G.muted, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Clear</button>}
+        <span style={{ alignSelf: "center", fontSize: 11, color: G.muted }}>{filtered.length} of {rows.length}</span>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No deposits.</div>}
-        {rows.map(r => (
+        {filtered.length === 0 && <div style={{ ...s.card, color: G.muted }}>No deposits match.</div>}
+        {filtered.map(r => (
           <div key={r.id} style={{ ...s.card, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>
@@ -255,17 +287,29 @@ function Withdrawals() {
   const [rows, setRows] = useState<any[]>([]);
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [rejectFor, setRejectFor] = useState<{ id: string; kind: "withdrawal" } | null>(null);
+  const [fCurrency, setFCurrency] = useState("");
+  const [fMethod, setFMethod] = useState("");
+  const [fCountry, setFCountry] = useState("");
   const refresh = () => {
-    let q = supabase.from("withdrawals").select("*, profiles!withdrawals_user_profile_fkey(full_name, email, account_number, currency), payment_methods(method_type, provider_name, account_number, paypal_email, account_holder_name)").order("created_at", { ascending: false });
+    let q = supabase.from("withdrawals").select("*, profiles!withdrawals_user_profile_fkey(full_name, email, account_number, currency, country_name, country_code), payment_methods(method_type, provider_name, account_number, paypal_email, account_holder_name)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
     q.then(({ data }) => setRows(data ?? []));
   };
   useEffect(refresh, [filter]);
   const approve = async (id: string) => {
-    const { error } = await supabase.from("withdrawals").update({ status: "approved", reviewed_at: new Date().toISOString() }).eq("id", id);
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("withdrawals").update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", id);
     if (error) { toast(error.message); return; }
     toast("Withdrawal marked paid"); refresh();
   };
+  const filtered = rows.filter(r => {
+    if (fCurrency && (r.profiles?.currency || "") !== fCurrency) return false;
+    if (fMethod && (r.payment_methods?.method_type || "") !== fMethod) return false;
+    if (fCountry && (r.profiles?.country_code || "") !== fCountry) return false;
+    return true;
+  });
+  const currencies = Array.from(new Set(rows.map(r => r.profiles?.currency).filter(Boolean))).sort();
+  const countries = Array.from(new Set(rows.map(r => r.profiles?.country_code).filter(Boolean))).sort();
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -273,9 +317,27 @@ function Withdrawals() {
           <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.gold : G.card, color: filter === f ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{f.toUpperCase()}</button>
         ))}
       </div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All currencies</option>
+          {currencies.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={fMethod} onChange={e => setFMethod(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All methods</option>
+          <option value="mobile_money">Mobile money</option>
+          <option value="bank">Bank</option>
+          <option value="paypal">PayPal</option>
+        </select>
+        <select value={fCountry} onChange={e => setFCountry(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All countries</option>
+          {countries.map(c => { const cn = COUNTRIES.find(x => x.code === c); return <option key={c} value={c}>{cn ? `${cn.flag} ${cn.name}` : c}</option>; })}
+        </select>
+        {(fCurrency || fMethod || fCountry) && <button onClick={() => { setFCurrency(""); setFMethod(""); setFCountry(""); }} style={{ background: "transparent", color: G.muted, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Clear</button>}
+        <span style={{ alignSelf: "center", fontSize: 11, color: G.muted }}>{filtered.length} of {rows.length}</span>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No withdrawals.</div>}
-        {rows.map(r => (
+        {filtered.length === 0 && <div style={{ ...s.card, color: G.muted }}>No withdrawals match.</div>}
+        {filtered.map(r => (
           <div key={r.id} style={{ ...s.card, padding: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div>
@@ -616,5 +678,177 @@ export default function AdminPage() {
     <AurumProvider>
       <AdminInner />
     </AurumProvider>
+  );
+}
+
+// ===== News admin =====
+function NewsAdmin() {
+  const { s, G, toast } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+  const blank = { id: null as string | null, title: "", body: "", image_url: "", deadline_at: "", is_published: true };
+  const refresh = () => supabase.from("news_posts").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
+  useEffect(() => { refresh(); }, []);
+  const startNew = () => setEditing({ ...blank });
+
+  const upload = async (file: File) => {
+    const ext = file.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("news-images").upload(path, file, { upsert: false });
+    if (error) { toast(error.message); return null; }
+    const { data } = supabase.storage.from("news-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const save = async () => {
+    if (!editing.title.trim()) { toast("Title required"); return; }
+    const payload: any = {
+      title: editing.title.trim(), body: editing.body, image_url: editing.image_url || null,
+      deadline_at: editing.deadline_at ? new Date(editing.deadline_at).toISOString() : null,
+      is_published: editing.is_published,
+    };
+    let error;
+    if (editing.id) {
+      ({ error } = await supabase.from("news_posts").update(payload).eq("id", editing.id));
+    } else {
+      const { data: { user: me } } = await supabase.auth.getUser();
+      payload.created_by = me?.id;
+      ({ error } = await supabase.from("news_posts").insert(payload));
+    }
+    if (error) { toast(error.message); return; }
+    toast("Saved"); setEditing(null); refresh();
+  };
+  const del = async (id: string) => { if (!confirm("Delete this post?")) return; await supabase.from("news_posts").delete().eq("id", id); refresh(); };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ ...s.serif, fontSize: 20 }}>News & announcements</div>
+        <button style={{ ...s.btnGold, width: "auto", padding: "8px 14px" }} onClick={startNew}>＋ New post</button>
+      </div>
+      {editing && (
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>{editing.id ? "Edit post" : "New post"}</div>
+          <input style={s.input} placeholder="Title" value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+          <textarea style={{ ...s.input, marginTop: 8, minHeight: 100, fontFamily: "inherit" }} placeholder="Body / details" value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, letterSpacing: 0.4 }}>DEADLINE (optional, shows countdown)</label>
+              <input style={s.input} type="datetime-local" value={editing.deadline_at} onChange={e => setEditing({ ...editing, deadline_at: e.target.value })} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, letterSpacing: 0.4 }}>IMAGE</label>
+              <input style={s.input} type="file" accept="image/*" onChange={async e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const url = await upload(f);
+                if (url) setEditing({ ...editing, image_url: url });
+              }} />
+              {editing.image_url && <img src={editing.image_url} alt="" style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 8, marginTop: 8 }} />}
+            </div>
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, cursor: "pointer" }}>
+            <input type="checkbox" checked={editing.is_published} onChange={e => setEditing({ ...editing, is_published: e.target.checked })} style={{ accentColor: G.gold }} />
+            Published (visible to users)
+          </label>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button style={s.btnGhost} onClick={() => setEditing(null)}>Cancel</button>
+            <button style={s.btnGold} onClick={save}>Save</button>
+          </div>
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No posts yet.</div>}
+        {rows.map(r => {
+          const dl = r.deadline_at ? new Date(r.deadline_at) : null;
+          const expired = dl && dl.getTime() < Date.now();
+          return (
+            <div key={r.id} style={{ ...s.card, padding: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
+              {r.image_url && <img src={r.image_url} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8 }} />}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{r.title} {!r.is_published && <span style={{ color: G.muted, fontSize: 11 }}>(draft)</span>}</div>
+                <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>
+                  Posted {new Date(r.created_at).toLocaleDateString()}{dl && ` · Deadline ${dl.toLocaleString()}${expired ? " (expired)" : ""}`}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button style={{ background: "transparent", color: G.text, border: `1px solid ${G.border}`, padding: "4px 8px", borderRadius: 6, fontSize: 11, cursor: "pointer" }} onClick={() => setEditing({ ...r, deadline_at: r.deadline_at ? new Date(r.deadline_at).toISOString().slice(0, 16) : "" })}>Edit</button>
+                <button style={{ background: "transparent", color: G.red, border: `1px solid ${G.red}`, padding: "4px 8px", borderRadius: 6, fontSize: 11, cursor: "pointer" }} onClick={() => del(r.id)}>Delete</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ===== Audit log =====
+function AuditLog() {
+  const { s, G } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [actors, setActors] = useState<Record<string, any>>({});
+  const [users, setUsers] = useState<Record<string, any>>({});
+  const [q, setQ] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500);
+      const list = data ?? [];
+      setRows(list);
+      const ids = Array.from(new Set([...list.map(r => r.actor_id), ...list.map(r => r.target_user_id)].filter(Boolean)));
+      if (ids.length) {
+        const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number").in("user_id", ids);
+        const map: Record<string, any> = {};
+        (ps ?? []).forEach((p: any) => { map[p.user_id] = p; });
+        setActors(map); setUsers(map);
+      }
+    })();
+  }, []);
+
+  const filtered = rows.filter(r => {
+    if (actionFilter && !r.action.includes(actionFilter)) return false;
+    if (!q) return true;
+    const needle = q.toLowerCase();
+    const u = users[r.target_user_id]; const a = actors[r.actor_id];
+    return (u?.full_name || "").toLowerCase().includes(needle)
+      || (u?.email || "").toLowerCase().includes(needle)
+      || String(u?.account_number || "").includes(needle)
+      || (r.note || "").toLowerCase().includes(needle)
+      || (a?.full_name || "").toLowerCase().includes(needle);
+  });
+
+  const actions = Array.from(new Set(rows.map(r => r.action))).sort();
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <input style={{ ...s.input, flex: 1, minWidth: 240 }} placeholder="Search by user, admin, note…" value={q} onChange={e => setQ(e.target.value)} />
+        <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "0 12px", borderRadius: 8, fontSize: 13 }}>
+          <option value="">All actions</option>
+          {actions.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+      </div>
+      <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "160px 160px 1fr 1fr 110px 1fr", padding: "10px 14px", background: G.bg, fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>
+          <span>WHEN</span><span>ADMIN</span><span>ACTION</span><span>TARGET USER</span><span>AMOUNT</span><span>NOTE</span>
+        </div>
+        {filtered.map(r => {
+          const a = actors[r.actor_id]; const u = users[r.target_user_id];
+          const colour = r.action.includes("approved") ? G.green : r.action.includes("rejected") ? G.red : G.amber;
+          return (
+            <div key={r.id} style={{ display: "grid", gridTemplateColumns: "160px 160px 1fr 1fr 110px 1fr", padding: "10px 14px", borderTop: `1px solid ${G.border}`, fontSize: 12, alignItems: "center" }}>
+              <span style={{ color: G.muted }}>{new Date(r.created_at).toLocaleString()}</span>
+              <span>{a?.full_name || a?.email || r.actor_id.slice(0, 8)}</span>
+              <span style={{ color: colour, fontWeight: 600 }}>{r.action}</span>
+              <span>{u ? <>#{u.account_number} {u.full_name || u.email}</> : "—"}</span>
+              <span style={{ color: G.gold }}>{r.amount != null ? Number(r.amount).toFixed(2) : "—"}</span>
+              <span style={{ color: G.muted, fontStyle: r.note ? "italic" : "normal" }}>{r.note || "—"}</span>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <div style={{ padding: 20, color: G.muted, fontSize: 13 }}>No audit entries.</div>}
+      </div>
+    </div>
   );
 }

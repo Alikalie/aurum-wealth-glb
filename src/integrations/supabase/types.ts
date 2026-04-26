@@ -83,6 +83,45 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string
+          amount: number | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          note: string | null
+          target_id: string | null
+          target_table: string
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          amount?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          note?: string | null
+          target_id?: string | null
+          target_table: string
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          amount?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          note?: string | null
+          target_id?: string | null
+          target_table?: string
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       deposits: {
         Row: {
           admin_account_id: string | null
@@ -157,6 +196,42 @@ export type Database = {
         Update: {
           currency?: string
           rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      news_posts: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          deadline_at: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          deadline_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          deadline_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          title?: string
           updated_at?: string
         }
         Relationships: []

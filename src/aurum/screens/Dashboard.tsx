@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { fmtMoney, convertFromUsd } from "../data";
 import { EmptyState, NavIcon } from "../ui";
+import { NewsFeed } from "./NewsFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import i18n from "@/i18n";
@@ -51,7 +52,8 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
 
 function HomeTab({ navTo }: { navTo: NavFn }) {
   const { s, G, profile } = useAurum();
-  const balance = (profile?.earned ?? 0) - (profile?.withdrawn ?? 0);
+  const main = Number(profile?.invested ?? 0) + Number(profile?.earned ?? 0) - Number(profile?.withdrawn ?? 0);
+  const profit = Number(profile?.earned ?? 0);
   const cur = profile?.currency ?? "USD";
   const initials = ((profile?.first_name?.[0] ?? "") + (profile?.last_name?.[0] ?? "")) || (profile?.full_name ?? "U").slice(0, 2);
   return (
@@ -65,9 +67,13 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
         <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
       </div>
       <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>AVAILABLE BALANCE</div>
-        <div style={{ ...s.serif, fontSize: 34, fontWeight: 600, margin: "8px 0 4px" }}>{fmtMoney(balance, cur)}</div>
-        <div style={{ fontSize: 12, color: G.muted }}>Earned − Withdrawn</div>
+        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>MAIN BALANCE</div>
+        <div style={{ ...s.serif, fontSize: 34, fontWeight: 600, margin: "8px 0 4px" }}>{fmtMoney(main, cur)}</div>
+        <div style={{ fontSize: 12, color: G.muted }}>Deposits + earnings, ready to invest or withdraw</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
+          <span style={{ fontSize: 12, color: G.muted }}>Profit earned so far</span>
+          <span style={{ ...s.serif, fontSize: 18, fontWeight: 600, color: G.green }}>{fmtMoney(profit, cur)}</span>
+        </div>
         <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
           <button style={{ ...s.btnGold, padding: 12, fontSize: 13 }} onClick={() => navTo("deposit")}>↓ Deposit</button>
           <button style={{ ...s.btnGhost, padding: 12, fontSize: 13 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
@@ -75,7 +81,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
       </div>
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[
-          { l: "Invested", v: fmtMoney(Number(profile?.invested ?? 0), cur) },
+          { l: "Deposited", v: fmtMoney(Number(profile?.invested ?? 0), cur) },
           { l: "Earned", v: fmtMoney(Number(profile?.earned ?? 0), cur) },
           { l: "Withdrawn", v: fmtMoney(Number(profile?.withdrawn ?? 0), cur) },
         ].map(x => (
@@ -86,7 +92,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
         ))}
       </div>
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
-      <EmptyState icon="✦" title="Welcome to Aurum" sub="Browse Markets to start a daily-earning investment cycle." />
+      <NewsFeed />
     </div>
   );
 }
@@ -235,7 +241,7 @@ function ProfileTab({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[
-          { l: "Invested", v: fmtMoney(Number(profile?.invested ?? 0), cur) },
+          { l: "Deposited", v: fmtMoney(Number(profile?.invested ?? 0), cur) },
           { l: "Earned", v: fmtMoney(Number(profile?.earned ?? 0), cur) },
           { l: "Withdrawn", v: fmtMoney(Number(profile?.withdrawn ?? 0), cur) },
         ].map(x => (
