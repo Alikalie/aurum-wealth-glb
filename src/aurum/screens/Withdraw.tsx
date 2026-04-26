@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
-import { fmtMoney } from "../data";
+import { fmtMoney, convertFromUsd } from "../data";
 import { supabase } from "@/integrations/supabase/client";
 
 export function Withdraw({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast, refreshProfile } = useAurum();
   const cur = profile?.currency ?? "USD";
-  const balance = (profile?.earned ?? 0) - (profile?.withdrawn ?? 0);
+  const balance = (Number(profile?.invested ?? 0) + Number(profile?.earned ?? 0) - Number(profile?.withdrawn ?? 0));
+  const profit = Number(profile?.earned ?? 0);
+  // Minimum withdrawal is 2 USD; convert to user's currency for the friendly check
+  const minLocal = convertFromUsd(2, cur);
   const [methods, setMethods] = useState<any[]>([]);
   const [chosen, setChosen] = useState<any>(null);
   const [amount, setAmount] = useState("");
@@ -26,6 +29,7 @@ export function Withdraw({ nav }: { nav: (s: string) => void }) {
     if (!user) return;
     const amt = Number(amount);
     if (!amt || amt <= 0) { toast("Enter a valid amount"); return; }
+    if (amt < minLocal) { toast(`Minimum withdrawal is ${fmtMoney(minLocal, cur)} ($2 USD)`); return; }
     if (amt > balance) { toast("Amount exceeds your available balance"); return; }
     if (!chosen) { toast("Add a payment method first"); return; }
     setSubmitting(true);
@@ -52,8 +56,10 @@ export function Withdraw({ nav }: { nav: (s: string) => void }) {
   return (
     <ScreenShell title="Withdraw" onBack={() => nav("dashboard")}>
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: G.muted }}>AVAILABLE BALANCE</div>
+        <div style={{ fontSize: 11, color: G.muted }}>MAIN BALANCE</div>
         <div style={{ ...s.serif, fontSize: 26, fontWeight: 600, color: G.gold }}>{fmtMoney(balance, cur)}</div>
+        <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Includes deposits + profits. Profit so far: <strong style={{ color: G.green }}>{fmtMoney(profit, cur)}</strong></div>
+        <div style={{ fontSize: 11, color: G.muted, marginTop: 4 }}>Minimum withdrawal: {fmtMoney(minLocal, cur)} ($2 USD)</div>
       </div>
 
       <label style={s.label}>AMOUNT ({cur})</label>
