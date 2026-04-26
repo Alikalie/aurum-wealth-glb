@@ -98,22 +98,11 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
 }
 
 function MarketsTab() {
-  const { s, G, profile, toast, user, refreshProfile } = useAurum();
+  const { s, G, profile } = useAurum();
   const [products, setProducts] = useState<any[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
   const cur = profile?.currency ?? "USD";
 
   useEffect(() => { supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }).then(({ data }) => setProducts(data ?? [])); }, []);
-
-  const buy = async (p: any) => {
-    if (!user) return;
-    setBusy(p.id);
-    const { error } = await supabase.rpc("purchase_product", { p_product_id: p.id });
-    setBusy(null);
-    if (error) { toast(error.message); return; }
-    toast("Cycle started — daily earnings begin");
-    refreshProfile();
-  };
 
   return (
     <div style={{ padding: "20px 20px 0" }}>
