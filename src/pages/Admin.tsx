@@ -680,3 +680,175 @@ export default function AdminPage() {
     </AurumProvider>
   );
 }
+
+// ===== News admin =====
+function NewsAdmin() {
+  const { s, G, toast } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+  const blank = { id: null as string | null, title: "", body: "", image_url: "", deadline_at: "", is_published: true };
+  const refresh = () => supabase.from("news_posts").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
+  useEffect(() => { refresh(); }, []);
+  const startNew = () => setEditing({ ...blank });
+
+  const upload = async (file: File) => {
+    const ext = file.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("news-images").upload(path, file, { upsert: false });
+    if (error) { toast(error.message); return null; }
+    const { data } = supabase.storage.from("news-images").getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const save = async () => {
+    if (!editing.title.trim()) { toast("Title required"); return; }
+    const payload: any = {
+      title: editing.title.trim(), body: editing.body, image_url: editing.image_url || null,
+      deadline_at: editing.deadline_at ? new Date(editing.deadline_at).toISOString() : null,
+      is_published: editing.is_published,
+    };
+    let error;
+    if (editing.id) {
+      ({ error } = await supabase.from("news_posts").update(payload).eq("id", editing.id));
+    } else {
+      const { data: { user: me } } = await supabase.auth.getUser();
+      payload.created_by = me?.id;
+      ({ error } = await supabase.from("news_posts").insert(payload));
+    }
+    if (error) { toast(error.message); return; }
+    toast("Saved"); setEditing(null); refresh();
+  };
+  const del = async (id: string) => { if (!confirm("Delete this post?")) return; await supabase.from("news_posts").delete().eq("id", id); refresh(); };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ ...s.serif, fontSize: 20 }}>News & announcements</div>
+        <button style={{ ...s.btnGold, width: "auto", padding: "8px 14px" }} onClick={startNew}>＋ New post</button>
+      </div>
+      {editing && (
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>{editing.id ? "Edit post" : "New post"}</div>
+          <input style={s.input} placeholder="Title" value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+          <textarea style={{ ...s.input, marginTop: 8, minHeight: 100, fontFamily: "inherit" }} placeholder="Body / details" value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, letterSpacing: 0.4 }}>DEADLINE (optional, shows countdown)</label>
+              <input style={s.input} type="datetime-local" value={editing.deadline_at} onChange={e => setEditing({ ...editing, deadline_at: e.target.value })} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: G.muted, letterSpacing: 0.4 }}>IMAGE</label>
+              <input style={s.input} type="file" accept="image/*" onChange={async e => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const url = await upload(f);
+                if (url) setEditing({ ...editing, image_url: url });
+              }} />
+              {editing.image_url && <img src={editing.image_url} alt="" style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 8, marginTop: 8 }} />}
+            </div>
+          </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, cursor: "pointer" }}>
+            <input type="checkbox" checked={editing.is_published} onChange={e => setEditing({ ...editing, is_published: e.target.checked })} style={{ accentColor: G.gold }} />
+            Published (visible to users)
+          </label>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button style={s.btnGhost} onClick={() => setEditing(null)}>Cancel</button>
+            <button style={s.btnGold} onClick={save}>Save</button>
+          </div>
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No posts yet.</div>}
+        {rows.map(r => {
+          const dl = r.deadline_at ? new Date(r.deadline_at) : null;
+          const expired = dl && dl.getTime() < Date.now();
+          return (
+            <div key={r.id} style={{ ...s.card, padding: 12, display: "flex", gap: 12, alignItems: "flex-start" }}>
+              {r.image_url && <img src={r.image_url} alt="" style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 8 }} />}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600 }}>{r.title} {!r.is_published && <span style={{ color: G.muted, fontSize: 11 }}>(draft)</span>}</div>
+                <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>
+                  Posted {new Date(r.created_at).toLocaleDateString()}{dl && ` · Deadline ${dl.toLocaleString()}${expired ? " (expired)" : ""}`}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button style={{ background: "transparent", color: G.text, border: `1px solid ${G.border}`, padding: "4px 8px", borderRadius: 6, fontSize: 11, cursor: "pointer" }} onClick={() => setEditing({ ...r, deadline_at: r.deadline_at ? new Date(r.deadline_at).toISOString().slice(0, 16) : "" })}>Edit</button>
+                <button style={{ background: "transparent", color: G.red, border: `1px solid ${G.red}`, padding: "4px 8px", borderRadius: 6, fontSize: 11, cursor: "pointer" }} onClick={() => del(r.id)}>Delete</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ===== Audit log =====
+function AuditLog() {
+  const { s, G } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [actors, setActors] = useState<Record<string, any>>({});
+  const [users, setUsers] = useState<Record<string, any>>({});
+  const [q, setQ] = useState("");
+  const [actionFilter, setActionFilter] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(500);
+      const list = data ?? [];
+      setRows(list);
+      const ids = Array.from(new Set([...list.map(r => r.actor_id), ...list.map(r => r.target_user_id)].filter(Boolean)));
+      if (ids.length) {
+        const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number").in("user_id", ids);
+        const map: Record<string, any> = {};
+        (ps ?? []).forEach((p: any) => { map[p.user_id] = p; });
+        setActors(map); setUsers(map);
+      }
+    })();
+  }, []);
+
+  const filtered = rows.filter(r => {
+    if (actionFilter && !r.action.includes(actionFilter)) return false;
+    if (!q) return true;
+    const needle = q.toLowerCase();
+    const u = users[r.target_user_id]; const a = actors[r.actor_id];
+    return (u?.full_name || "").toLowerCase().includes(needle)
+      || (u?.email || "").toLowerCase().includes(needle)
+      || String(u?.account_number || "").includes(needle)
+      || (r.note || "").toLowerCase().includes(needle)
+      || (a?.full_name || "").toLowerCase().includes(needle);
+  });
+
+  const actions = Array.from(new Set(rows.map(r => r.action))).sort();
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <input style={{ ...s.input, flex: 1, minWidth: 240 }} placeholder="Search by user, admin, note…" value={q} onChange={e => setQ(e.target.value)} />
+        <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "0 12px", borderRadius: 8, fontSize: 13 }}>
+          <option value="">All actions</option>
+          {actions.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+      </div>
+      <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "160px 160px 1fr 1fr 110px 1fr", padding: "10px 14px", background: G.bg, fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>
+          <span>WHEN</span><span>ADMIN</span><span>ACTION</span><span>TARGET USER</span><span>AMOUNT</span><span>NOTE</span>
+        </div>
+        {filtered.map(r => {
+          const a = actors[r.actor_id]; const u = users[r.target_user_id];
+          const colour = r.action.includes("approved") ? G.green : r.action.includes("rejected") ? G.red : G.amber;
+          return (
+            <div key={r.id} style={{ display: "grid", gridTemplateColumns: "160px 160px 1fr 1fr 110px 1fr", padding: "10px 14px", borderTop: `1px solid ${G.border}`, fontSize: 12, alignItems: "center" }}>
+              <span style={{ color: G.muted }}>{new Date(r.created_at).toLocaleString()}</span>
+              <span>{a?.full_name || a?.email || r.actor_id.slice(0, 8)}</span>
+              <span style={{ color: colour, fontWeight: 600 }}>{r.action}</span>
+              <span>{u ? <>#{u.account_number} {u.full_name || u.email}</> : "—"}</span>
+              <span style={{ color: G.gold }}>{r.amount != null ? Number(r.amount).toFixed(2) : "—"}</span>
+              <span style={{ color: G.muted, fontStyle: r.note ? "italic" : "normal" }}>{r.note || "—"}</span>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && <div style={{ padding: 20, color: G.muted, fontSize: 13 }}>No audit entries.</div>}
+      </div>
+    </div>
+  );
+}
