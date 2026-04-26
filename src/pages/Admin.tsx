@@ -210,7 +210,7 @@ function Deposits() {
   const [fMethod, setFMethod] = useState("");
   const [fCountry, setFCountry] = useState("");
   const refresh = () => {
-    let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency)").order("created_at", { ascending: false });
+    let q = supabase.from("deposits").select("*, profiles!deposits_user_profile_fkey(full_name, email, account_number, currency, country_name, country_code)").order("created_at", { ascending: false });
     if (filter === "pending") q = q.eq("status", "pending");
     q.then(({ data }) => setRows(data ?? []));
   };
@@ -224,12 +224,11 @@ function Deposits() {
   const filtered = rows.filter(r => {
     if (fCurrency && (r.profiles?.currency || "") !== fCurrency) return false;
     if (fMethod && r.method_type !== fMethod) return false;
-    if (fCountry) {
-      // need country lookup — fetched via separate join? we don't have it; skip
-    }
+    if (fCountry && (r.profiles?.country_code || "") !== fCountry) return false;
     return true;
   });
   const currencies = Array.from(new Set(rows.map(r => r.profiles?.currency).filter(Boolean))).sort();
+  const countries = Array.from(new Set(rows.map(r => r.profiles?.country_code).filter(Boolean))).sort();
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
@@ -248,7 +247,11 @@ function Deposits() {
           <option value="bank">Bank</option>
           <option value="paypal">PayPal</option>
         </select>
-        {(fCurrency || fMethod) && <button onClick={() => { setFCurrency(""); setFMethod(""); }} style={{ background: "transparent", color: G.muted, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Clear filters</button>}
+        <select value={fCountry} onChange={e => setFCountry(e.target.value)} style={{ background: G.card, color: G.text, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12 }}>
+          <option value="">All countries</option>
+          {countries.map(c => { const cn = COUNTRIES.find(x => x.code === c); return <option key={c} value={c}>{cn ? `${cn.flag} ${cn.name}` : c}</option>; })}
+        </select>
+        {(fCurrency || fMethod || fCountry) && <button onClick={() => { setFCurrency(""); setFMethod(""); setFCountry(""); }} style={{ background: "transparent", color: G.muted, border: `1px solid ${G.border}`, padding: "6px 10px", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Clear</button>}
         <span style={{ alignSelf: "center", fontSize: 11, color: G.muted }}>{filtered.length} of {rows.length}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
