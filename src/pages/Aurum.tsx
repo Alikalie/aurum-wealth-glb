@@ -10,11 +10,13 @@ import { Sell } from "@/aurum/screens/Sell";
 import { Support, Privacy, Currency } from "@/aurum/screens/Content";
 import { TransactionDetails } from "@/aurum/screens/TransactionDetails";
 import { MyProducts } from "@/aurum/screens/MyProducts";
+import { ProductDetails } from "@/aurum/screens/ProductDetails";
 
 function Shell() {
   const { s, G, user, loading } = useAurum();
   const [screen, setScreen] = useState("landing");
   const [txId, setTxId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
 
   // Inject fonts + global style once; refresh body bg when palette changes
   useEffect(() => {
@@ -43,6 +45,7 @@ function Shell() {
 
   const nav = (sc: string, payload?: any) => {
     if (sc === "tx-details" && payload) setTxId(payload);
+    if (sc === "product-details" && payload) setProductId(payload);
     setScreen(sc);
   };
 
@@ -59,6 +62,7 @@ function Shell() {
         {screen === "withdraw" && <Withdraw nav={nav} />}
         {screen === "sell" && <Sell nav={nav} />}
         {screen === "my-products" && <MyProducts nav={nav} />}
+        {screen === "product-details" && <ProductDetails nav={nav} productId={productId} />}
         {screen === "tx-details" && <TransactionDetails nav={nav} txId={txId} />}
         {screen === "support" && <Support nav={nav} />}
         {screen === "privacy" && <Privacy nav={nav} />}
