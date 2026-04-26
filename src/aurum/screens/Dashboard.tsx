@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { fmtMoney, convertFromUsd } from "../data";
 import { EmptyState, NavIcon } from "../ui";
+import { NewsFeed } from "./NewsFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import i18n from "@/i18n";
