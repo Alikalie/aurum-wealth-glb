@@ -30,7 +30,7 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
     <div style={{ height: "100vh", position: "relative" }}>
       <div style={{ height: "100vh", overflowY: "auto", paddingBottom: 80 }}>
         {tab === "Home" && <HomeTab navTo={navTo} />}
-        {tab === "Markets" && <MarketsTab />}
+        {tab === "Markets" && <MarketsTab navTo={navTo} />}
         {tab === "Transactions" && <TransactionsTab navTo={navTo} />}
         {tab === "Profile" && <ProfileTab nav={nav} navTo={navTo} />}
       </div>
@@ -97,23 +97,12 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
   );
 }
 
-function MarketsTab() {
-  const { s, G, profile, toast, user, refreshProfile } = useAurum();
+function MarketsTab({ navTo }: { navTo: NavFn }) {
+  const { s, G, profile } = useAurum();
   const [products, setProducts] = useState<any[]>([]);
-  const [busy, setBusy] = useState<string | null>(null);
   const cur = profile?.currency ?? "USD";
 
   useEffect(() => { supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }).then(({ data }) => setProducts(data ?? [])); }, []);
-
-  const buy = async (p: any) => {
-    if (!user) return;
-    setBusy(p.id);
-    const { error } = await supabase.rpc("purchase_product", { p_product_id: p.id });
-    setBusy(null);
-    if (error) { toast(error.message); return; }
-    toast("Cycle started — daily earnings begin");
-    refreshProfile();
-  };
 
   return (
     <div style={{ padding: "20px 20px 0" }}>
@@ -145,7 +134,7 @@ function MarketsTab() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
                   <span style={{ fontSize: 11, color: G.muted }}>{p.purchase_limit > 0 ? `Limit: ${p.purchase_limit}` : "No purchase limit"}</span>
-                  <button onClick={() => buy(p)} disabled={busy === p.id} style={{ background: G.gold, color: "#1a1208", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>{busy === p.id ? "Buying…" : "Buy"}</button>
+                  <button onClick={() => navTo("product-details", p.id)} style={{ background: G.gold, color: "#1a1208", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Buy</button>
                 </div>
               </div>
             );

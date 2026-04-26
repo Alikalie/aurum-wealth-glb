@@ -6,12 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import { NewsFeed } from "./NewsFeed";
 
-const TICKERS = [
-  { sym: "BTC", chg: "+2.4%", up: true }, { sym: "AAPL", chg: "+0.8%", up: true },
-  { sym: "ETH", chg: "-1.2%", up: false }, { sym: "NVDA", chg: "+3.1%", up: true },
-  { sym: "SPY", chg: "-0.3%", up: false },
-];
-
 const FEATURES = [
   { icon: "◆", t: "Zero commission trades", d: "Trade stocks and ETFs with no fees, ever. Keep more of what you earn." },
   { icon: "✦", t: "AI-powered insights", d: "Personalized recommendations driven by real-time market analysis." },
@@ -27,7 +21,6 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         <div style={{ position: "absolute", top: -50, left: "50%", transform: "translateX(-50%)", width: 500, height: 400, background: `radial-gradient(circle, ${G.gold}33 0%, transparent 60%)`, pointerEvents: "none" }} />
         <div style={{ position: "relative" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, background: `linear-gradient(135deg, ${G.gold}, ${G.gold}99)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#1a1208", fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 700, fontStyle: "italic" }}>A</div>
             <div style={{ ...s.serif, fontSize: 24, fontWeight: 700, letterSpacing: 0.5 }}>Aurum</div>
             <span style={{ fontSize: 10, color: G.muted, letterSpacing: 1.5, marginLeft: 4, paddingTop: 6 }}>WEALTH</span>
           </div>
@@ -42,16 +35,7 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         </div>
       </div>
 
-      <div style={{ overflowX: "auto", padding: "8px 22px 20px", display: "flex", gap: 10 }}>
-        {TICKERS.map(t => (
-          <div key={t.sym} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: "10px 14px", minWidth: 100, flexShrink: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 13 }}>{t.sym}</div>
-            <div style={{ fontSize: 12, color: t.up ? G.green : G.red, marginTop: 2 }}>{t.chg}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ padding: "0 22px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ padding: "8px 22px 0", display: "flex", flexDirection: "column", gap: 10 }}>
         <button style={s.btnGold} onClick={() => nav("register")}>Create free account</button>
         <button style={s.btnGhost} onClick={() => nav("login")}>Sign in to Aurum</button>
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
