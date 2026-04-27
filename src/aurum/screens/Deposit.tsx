@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
-import { fmtMoney } from "../data";
+import { fmtMoney, convertFromUsd, fxRatesSync } from "../data";
 import { supabase } from "@/integrations/supabase/client";
 
 type Method = "mobile_money" | "bank" | "paypal";
@@ -9,6 +9,7 @@ type Method = "mobile_money" | "bank" | "paypal";
 export function Deposit({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast } = useAurum();
   const cur = profile?.currency ?? "USD";
+  const fxRate = fxRatesSync()[cur] || 1; // local units per 1 USD
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<Method>("mobile_money");
@@ -17,6 +18,9 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const amountNum = Number(amount) || 0;
+  const amountUsd = amountNum / (fxRate || 1);
 
   useEffect(() => {
     const country = profile?.country_code;
@@ -62,9 +66,15 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
     <ScreenShell title="Deposit Funds" onBack={() => nav("dashboard")}>
       {step === 1 && (
         <>
-          <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px" }}>Enter the amount you want to deposit.</p>
+          <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px" }}>Enter the amount in your local currency. Investments are tracked in USD and converted automatically.</p>
           <label style={s.label}>AMOUNT ({cur})</label>
           <input style={{ ...s.input, fontSize: 22, textAlign: "center" }} type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+          {cur !== "USD" && amountNum > 0 && (
+            <div style={{ textAlign: "center", marginTop: 8, fontSize: 13, color: G.muted }}>
+              ≈ <strong style={{ color: G.gold }}>{fmtMoney(amountUsd, "USD")}</strong>
+              <span style={{ fontSize: 11, marginLeft: 6, opacity: 0.8 }}>(rate: 1 USD = {fxRate} {cur})</span>
+            </div>
+          )}
           <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
             {[50, 100, 500, 1000].map(v => <button key={v} onClick={() => setAmount(String(v))} style={{ ...s.btnGhost, padding: 10, fontSize: 12 }}>+{v}</button>)}
           </div>

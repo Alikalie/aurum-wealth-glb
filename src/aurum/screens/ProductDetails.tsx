@@ -11,6 +11,7 @@ export function ProductDetails({ nav, productId }: { nav: NavFn; productId: stri
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const cur = profile?.currency ?? "USD";
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export function ProductDetails({ nav, productId }: { nav: NavFn; productId: stri
     setBusy(true);
     const { error } = await supabase.rpc("purchase_product", { p_product_id: product.id });
     setBusy(false);
+    setConfirmOpen(false);
     if (error) { toast(error.message); return; }
     toast("Cycle started — earnings begin");
     refreshProfile();
@@ -104,9 +106,37 @@ export function ProductDetails({ nav, productId }: { nav: NavFn; productId: stri
         {product.purchase_limit > 0 ? `Purchase limit: ${product.purchase_limit} per user` : "No purchase limit"}
       </div>
 
-      <button style={s.btnGold} onClick={buy} disabled={busy}>
+      <button style={s.btnGold} onClick={() => {
+        if (!user) { toast("Please sign in to buy"); setTimeout(() => nav("login"), 600); return; }
+        setConfirmOpen(true);
+      }} disabled={busy}>
         {busy ? "Processing…" : `Buy for ${fmtMoney(priceLocal, cur)}`}
       </button>
+
+      {confirmOpen && (
+        <div onClick={() => !busy && setConfirmOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 16, padding: 22, maxWidth: 360, width: "100%" }}>
+            <div style={{ ...s.serif, fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Confirm purchase</div>
+            <div style={{ fontSize: 13, color: G.muted, marginBottom: 16 }}>Review the details before starting your earning cycle.</div>
+            <div style={{ background: G.bg, borderRadius: 12, padding: 14, marginBottom: 14 }}>
+              <Row label="Product" value={product.name} G={G} />
+              <Row label="Price" value={fmtMoney(priceLocal, cur)} G={G} highlight />
+              <Row label="Payout interval" value={`Every ${intervalLabel}`} G={G} />
+              <Row label="Total payouts" value={`${totalPayouts}`} G={G} />
+              <Row label="Cycle duration" value={cycleDuration} G={G} />
+              <Row label="Total return" value={fmtMoney(totalReturnLocal, cur)} G={G} highlight />
+              <Row label="Net profit" value={fmtMoney(profitLocal, cur)} G={G} highlight last />
+            </div>
+            <div style={{ fontSize: 11, color: G.muted, marginBottom: 14, textAlign: "center" }}>
+              Funds will be deducted from your main balance immediately.
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={s.btnGhost} onClick={() => setConfirmOpen(false)} disabled={busy}>Cancel</button>
+              <button style={s.btnGold} onClick={buy} disabled={busy}>{busy ? "Processing…" : "Confirm & buy"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </ScreenShell>
   );
 }

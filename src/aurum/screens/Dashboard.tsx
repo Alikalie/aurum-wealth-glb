@@ -98,11 +98,20 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
 }
 
 function MarketsTab({ navTo }: { navTo: NavFn }) {
-  const { s, G, profile } = useAurum();
+  const { s, G, profile, user, toast } = useAurum();
   const [products, setProducts] = useState<any[]>([]);
   const cur = profile?.currency ?? "USD";
 
   useEffect(() => { supabase.from("products").select("*").eq("is_active", true).order("created_at", { ascending: false }).then(({ data }) => setProducts(data ?? [])); }, []);
+
+  const onBuy = (p: any) => {
+    if (!user) {
+      toast("Please sign in to buy a product");
+      setTimeout(() => navTo("login"), 600);
+      return;
+    }
+    navTo("product-details", p.id);
+  };
 
   return (
     <div style={{ padding: "20px 20px 0" }}>
@@ -114,27 +123,49 @@ function MarketsTab({ navTo }: { navTo: NavFn }) {
           {products.map(p => {
             const priceLocal = convertFromUsd(Number(p.price), cur);
             const dailyLocal = convertFromUsd(Number(p.daily_income), cur);
-            const totalReturn = dailyLocal * Number(p.cycle_days);
             const intervalH = Number(p.payout_interval_hours) || 24;
-            const intervalLabel = intervalH < 24 ? `${intervalH}h` : intervalH === 24 ? "day" : intervalH === 168 ? "week" : `${intervalH / 24}d`;
+            const totalPayouts = Math.round((Number(p.cycle_days) * 24) / intervalH);
+            const totalReturn = dailyLocal * totalPayouts;
+            const cycleLabel = intervalH >= 168 ? `${Math.round(p.cycle_days / 7)} Weeks` : `${p.cycle_days} Days`;
+            const perLabel = intervalH < 24 ? `${intervalH}h` : intervalH === 24 ? "Day" : intervalH === 168 ? "Week" : `${intervalH / 24}d`;
+            // Approx rating from ROI
+            const roi = Number(p.price) > 0 ? (Number(p.daily_income) * totalPayouts - Number(p.price)) / Number(p.price) : 0;
+            const rating = Math.max(0.1, Math.min(5, roi)).toFixed(1);
             return (
-              <div key={p.id} style={{ ...s.card, padding: 16 }}>
-                {p.image_url && <img src={p.image_url} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 12, marginBottom: 12 }} />}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{p.name}</div>
-                    {p.description && <div style={{ fontSize: 12, color: G.muted, marginTop: 4, lineHeight: 1.5 }}>{p.description}</div>}
+              <div key={p.id} style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+                {p.image_url && <img src={p.image_url} alt={p.name} style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }} />}
+                {/* Header: name + verified + rating */}
+                <div style={{ padding: "14px 16px 10px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div style={{ ...s.serif, fontSize: 19, fontWeight: 700 }}>{p.name}</div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, border: `1px solid ${G.gold}`, color: G.gold, borderRadius: 999, padding: "3px 10px", fontSize: 11, fontWeight: 600 }}>
+                      <span aria-hidden>✓</span> Verified
+                    </span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: G.gold, fontSize: 12, fontWeight: 600 }}>
+                      <span aria-hidden>★</span> {rating}
+                    </span>
                   </div>
-                  <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, color: G.gold }}>{fmtMoney(priceLocal, cur)}</div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 12, padding: "10px 0", borderTop: `1px solid ${G.border}`, borderBottom: `1px solid ${G.border}` }}>
-                  <Stat label="Cycle" value={`${p.cycle_days}× ${intervalLabel}`} G={G} />
-                  <Stat label={`Per ${intervalLabel}`} value={fmtMoney(dailyLocal, cur)} G={G} />
-                  <Stat label="Total" value={fmtMoney(totalReturn, cur)} G={G} />
+                {/* Description */}
+                {p.description && (
+                  <div style={{ padding: "0 16px 12px", fontSize: 13, color: G.muted, lineHeight: 1.5, borderBottom: `1px solid ${G.border}` }}>{p.description}</div>
+                )}
+                {/* Detail rows */}
+                <div style={{ padding: "4px 16px" }}>
+                  <DetailRow label="Price" value={fmtMoney(priceLocal, cur)} G={G} bold />
+                  <DetailRow label="Daily Earning" value={`+${fmtMoney(dailyLocal, cur)}`} G={G} valueColor={G.green} />
+                  <DetailRow label="Circle Duration" value={cycleLabel} G={G} />
+                  <DetailRow label={`Per ${perLabel}`} value={fmtMoney(dailyLocal, cur)} G={G} muted />
+                  <DetailRow label="Total Revenue" value={fmtMoney(totalReturn, cur)} G={G} bold last />
                 </div>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-                  <span style={{ fontSize: 11, color: G.muted }}>{p.purchase_limit > 0 ? `Limit: ${p.purchase_limit}` : "No purchase limit"}</span>
-                  <button onClick={() => navTo("product-details", p.id)} style={{ background: G.gold, color: "#1a1208", border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Buy</button>
+                {/* Buy button */}
+                <div style={{ padding: 14, background: G.bg }}>
+                  <button
+                    onClick={() => onBuy(p)}
+                    style={{ width: "100%", background: G.text === "#1A1612" ? "#0E3B2E" : G.gold, color: G.text === "#1A1612" ? "#fff" : "#1a1208", border: "none", borderRadius: 10, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  >
+                    Buy Product
+                  </button>
                 </div>
               </div>
             );
@@ -145,11 +176,11 @@ function MarketsTab({ navTo }: { navTo: NavFn }) {
   );
 }
 
-function Stat({ label, value, G }: { label: string; value: string; G: any }) {
+function DetailRow({ label, value, G, bold, last, muted, valueColor }: { label: string; value: string; G: any; bold?: boolean; last?: boolean; muted?: boolean; valueColor?: string }) {
   return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 10, color: G.muted, letterSpacing: 0.4 }}>{label.toUpperCase()}</div>
-      <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{value}</div>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: last ? "none" : `1px solid ${G.border}` }}>
+      <span style={{ fontSize: 13, color: muted ? G.muted : G.text }}>{label}</span>
+      <span style={{ fontSize: bold ? 16 : 14, fontWeight: bold ? 700 : 600, color: valueColor || (bold ? G.text : G.text) }}>{value}</span>
     </div>
   );
 }
