@@ -10,7 +10,6 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast } = useAurum();
   const cur = profile?.currency ?? "USD";
   const fxRate = fxRatesSync()[cur] || 1; // local units per 1 USD
-  const usdEquivalent = (Number(amountStr: string) => 0) as any; // placeholder, replaced below
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<Method>("mobile_money");
