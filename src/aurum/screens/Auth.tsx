@@ -36,16 +36,21 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
       </div>
 
       <div style={{ padding: "8px 22px 0", display: "flex", flexDirection: "column", gap: 10 }}>
-        <button style={s.btnGold} onClick={() => nav("register")}>Create free account</button>
+        <button style={s.btnGold} onClick={() => nav("register")}>Get Started — Create Account</button>
         <button style={s.btnGhost} onClick={() => nav("login")}>Sign in to Aurum</button>
+        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => { document.getElementById("aurum-news")?.scrollIntoView({ behavior: "smooth" }); }}>📰 News</button>
+          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => { document.getElementById("aurum-why")?.scrollIntoView({ behavior: "smooth" }); }}>✨ Why Aurum</button>
+          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => nav("register")}>📈 Invest</button>
+        </div>
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
       </div>
 
-      <div style={{ padding: "32px 22px 0" }}>
+      <div id="aurum-news" style={{ padding: "32px 22px 0" }}>
         <NewsFeed />
       </div>
 
-      <div style={{ padding: "40px 22px 60px" }}>
+      <div id="aurum-why" style={{ padding: "40px 22px 60px" }}>
         <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600 }}>WHY AURUM</div>
         <h2 style={{ ...s.serif, fontSize: 28, margin: "8px 0 24px", fontWeight: 600 }}>Built different. Built for you.</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
