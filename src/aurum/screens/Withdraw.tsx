@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
-import { fmtMoney, convertFromUsd } from "../data";
+import { fmtMoney, convertFromUsd, fxRatesSync } from "../data";
 import { supabase } from "@/integrations/supabase/client";
 
 export function Withdraw({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast, refreshProfile } = useAurum();
   const cur = profile?.currency ?? "USD";
+  const fxRate = fxRatesSync()[cur] || 1;
   const balance = (Number(profile?.invested ?? 0) + Number(profile?.earned ?? 0) - Number(profile?.withdrawn ?? 0));
   const profit = Number(profile?.earned ?? 0);
   // Minimum withdrawal is 2 USD; convert to user's currency for the friendly check
@@ -16,6 +17,8 @@ export function Withdraw({ nav }: { nav: (s: string) => void }) {
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const amountNum = Number(amount) || 0;
+  const amountUsd = amountNum / (fxRate || 1);
 
   useEffect(() => {
     if (!user) return;
@@ -64,6 +67,12 @@ export function Withdraw({ nav }: { nav: (s: string) => void }) {
 
       <label style={s.label}>AMOUNT ({cur})</label>
       <input style={{ ...s.input, fontSize: 22, textAlign: "center" }} type="number" inputMode="decimal" placeholder="0.00" value={amount} onChange={e => setAmount(e.target.value)} />
+      {cur !== "USD" && amountNum > 0 && (
+        <div style={{ textAlign: "center", marginTop: 8, fontSize: 13, color: G.muted }}>
+          ≈ <strong style={{ color: G.gold }}>{fmtMoney(amountUsd, "USD")}</strong>
+          <span style={{ fontSize: 11, marginLeft: 6, opacity: 0.8 }}>(rate: 1 USD = {fxRate} {cur})</span>
+        </div>
+      )}
 
       <label style={{ ...s.label, marginTop: 14 }}>SEND TO</label>
       {methods.length === 0 ? (
