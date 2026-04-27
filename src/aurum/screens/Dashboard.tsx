@@ -265,7 +265,7 @@ function ProfileTab({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {[
           { l: "Deposited", v: fmtMoney(Number(profile?.invested ?? 0), cur) },
-          { l: "Earned", v: fmtMoney(Number(profile?.earned ?? 0), cur) },
+          { l: "Profit", v: fmtMoney(Number(profile?.earned ?? 0), cur) },
           { l: "Withdrawn", v: fmtMoney(Number(profile?.withdrawn ?? 0), cur) },
         ].map(x => (
           <div key={x.l} style={{ ...s.card, flex: 1, padding: 14, textAlign: "center" }}>
