@@ -399,8 +399,23 @@ function Products() {
     daily_income_usd: "", purchase_limit: "0", resale_enabled: true,
   });
   const [previewCur, setPreviewCur] = useState("EUR");
+  const [uploading, setUploading] = useState(false);
   const refresh = () => supabase.from("products").select("*").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
   useEffect(() => { refresh(); }, []);
+
+  const uploadImage = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: false });
+    if (error) { toast(error.message); setUploading(false); return; }
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setForm(f => ({ ...f, image_url: data.publicUrl }));
+    setUploading(false);
+    toast("Image uploaded");
+  };
+
   const add = async () => {
     if (!form.name || !form.price_usd || !form.daily_income_usd) { toast("Name, price and income required"); return; }
     const price = Number(form.price_usd);
@@ -438,7 +453,18 @@ function Products() {
         <div style={{ fontSize: 12, color: G.muted, marginBottom: 12 }}>Enter all amounts in <strong style={{ color: G.gold }}>USD</strong>. The app converts to each user's local currency automatically.</div>
         <input style={s.input} placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
         <textarea style={{ ...s.input, marginTop: 8, minHeight: 60, fontFamily: "inherit" }} placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-        <input style={{ ...s.input, marginTop: 8 }} placeholder="Image URL (optional)" value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} />
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input style={{ ...s.input, flex: 1 }} placeholder="Image URL or upload below" value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} />
+            <label style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: "10px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {uploading ? "Uploading…" : "Upload"}
+              <input type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
+            </label>
+          </div>
+          {form.image_url && (
+            <img src={form.image_url} alt="preview" style={{ marginTop: 8, width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 8, border: `1px solid ${G.border}` }} />
+          )}
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
           <Field label="Price (USD)"><input style={s.input} type="number" value={form.price_usd} onChange={e => setForm({ ...form, price_usd: e.target.value })} /></Field>
           <Field label="Income / payout (USD)"><input style={s.input} type="number" value={form.daily_income_usd} onChange={e => setForm({ ...form, daily_income_usd: e.target.value })} /></Field>
