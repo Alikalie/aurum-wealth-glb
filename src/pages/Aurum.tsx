@@ -10,6 +10,7 @@ import { Withdraw } from "@/aurum/screens/Withdraw";
 import { Sell } from "@/aurum/screens/Sell";
 import { Support, Privacy, Currency } from "@/aurum/screens/Content";
 import { TransactionDetails } from "@/aurum/screens/TransactionDetails";
+import { TransactionsHistory } from "@/aurum/screens/TransactionsHistory";
 import { MyProducts } from "@/aurum/screens/MyProducts";
 import { ProductDetails } from "@/aurum/screens/ProductDetails";
 
@@ -66,6 +67,7 @@ function Shell() {
         {screen === "my-products" && <MyProducts nav={nav} />}
         {screen === "product-details" && <ProductDetails nav={nav} productId={productId} />}
         {screen === "tx-details" && <TransactionDetails nav={nav} txId={txId} />}
+        {screen === "transactions-history" && <TransactionsHistory nav={nav} />}
         {screen === "support" && <Support nav={nav} />}
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}

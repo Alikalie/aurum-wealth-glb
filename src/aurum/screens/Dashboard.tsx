@@ -94,6 +94,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
         ))}
       </div>
       <button style={{ ...s.btnGhost, marginBottom: 8 }} onClick={() => navTo("deposits-history")}>📥 My deposits & status →</button>
+      <button style={{ ...s.btnGhost, marginBottom: 8 }} onClick={() => navTo("transactions-history")}>📋 Transaction history →</button>
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       <NewsFeed />
     </div>
