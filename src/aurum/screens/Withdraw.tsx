@@ -59,9 +59,9 @@ export function Withdraw({ nav }: { nav: (s: string) => void }) {
   return (
     <ScreenShell title="Withdraw" onBack={() => nav("dashboard")}>
       <div style={{ ...s.card, marginBottom: 16 }}>
-        <div style={{ fontSize: 11, color: G.muted }}>MAIN BALANCE</div>
+        <div style={{ fontSize: 11, color: G.muted }}>WALLET BALANCE</div>
         <div style={{ ...s.serif, fontSize: 26, fontWeight: 600, color: G.gold }}>{fmtMoney(balance, cur)}</div>
-        <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Includes deposits + profits. Profit so far: <strong style={{ color: G.green }}>{fmtMoney(profit, cur)}</strong></div>
+        <div style={{ fontSize: 11, color: G.muted, marginTop: 6 }}>Deposits and profits combined. Profit so far: <strong style={{ color: G.green }}>{fmtMoney(profit, cur)}</strong></div>
         <div style={{ fontSize: 11, color: G.muted, marginTop: 4 }}>Minimum withdrawal: {fmtMoney(minLocal, cur)} ($2 USD)</div>
       </div>
 

@@ -5,6 +5,7 @@ import { Landing, Login, Register, Forgot } from "@/aurum/screens/Auth";
 import { Dashboard } from "@/aurum/screens/Dashboard";
 import { PaymentMethods } from "@/aurum/screens/PaymentMethods";
 import { Deposit } from "@/aurum/screens/Deposit";
+import { DepositsHistory } from "@/aurum/screens/DepositsHistory";
 import { Withdraw } from "@/aurum/screens/Withdraw";
 import { Sell } from "@/aurum/screens/Sell";
 import { Support, Privacy, Currency } from "@/aurum/screens/Content";
@@ -59,6 +60,7 @@ function Shell() {
         {screen === "dashboard" && <Dashboard nav={nav} navTo={nav} />}
         {screen === "payment-methods" && <PaymentMethods nav={nav} />}
         {screen === "deposit" && <Deposit nav={nav} />}
+        {screen === "deposits-history" && <DepositsHistory nav={nav} />}
         {screen === "withdraw" && <Withdraw nav={nav} />}
         {screen === "sell" && <Sell nav={nav} />}
         {screen === "my-products" && <MyProducts nav={nav} />}
