@@ -38,11 +38,6 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
       <div style={{ padding: "8px 22px 0", display: "flex", flexDirection: "column", gap: 10 }}>
         <button style={s.btnGold} onClick={() => nav("register")}>Get Started — Create Account</button>
         <button style={s.btnGhost} onClick={() => nav("login")}>Sign in to Aurum</button>
-        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => { document.getElementById("aurum-news")?.scrollIntoView({ behavior: "smooth" }); }}>📰 News</button>
-          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => { document.getElementById("aurum-why")?.scrollIntoView({ behavior: "smooth" }); }}>✨ Why Aurum</button>
-          <button style={{ ...s.btnGhost, padding: "12px", fontSize: 13 }} onClick={() => nav("register")}>📈 Invest</button>
-        </div>
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
       </div>
 

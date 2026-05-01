@@ -62,16 +62,16 @@ export type StyleSet = {
 };
 
 export const buildStyles = (G: Palette): StyleSet => ({
-  app: { background: G.bg, color: G.text, minHeight: "100vh", fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" },
+  app: { background: G.bg, color: G.text, minHeight: "100vh", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", fontSize: 13, letterSpacing: 0 },
   phone: { maxWidth: 390, margin: "0 auto", background: G.bg, minHeight: "100vh", position: "relative", overflow: "hidden" },
   scroll: { height: "100vh", overflowY: "auto", WebkitOverflowScrolling: "touch" },
-  serif: { fontFamily: "Georgia, 'Times New Roman', Times, serif" },
-  input: { width: "100%", background: G.card, border: `1px solid ${G.border}`, borderRadius: 12, padding: "14px 16px", color: G.text, fontSize: 15, outline: "none", fontFamily: "inherit", boxSizing: "border-box" },
-  label: { fontSize: 12, color: G.muted, marginBottom: 6, display: "block", letterSpacing: 0.4 },
-  btnGold: { width: "100%", background: G.gold, color: "#1a1208", border: "none", borderRadius: 12, padding: "15px", fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
-  btnGhost: { width: "100%", background: "transparent", color: G.text, border: `1px solid ${G.border}`, borderRadius: 12, padding: "15px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
-  btnDark: { width: "100%", background: G.card, color: G.text, border: `1px solid ${G.border}`, borderRadius: 12, padding: "14px", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 },
+  serif: { fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif", letterSpacing: -0.2 },
+  input: { width: "100%", background: G.card, border: `1px solid ${G.border}`, borderRadius: 10, padding: "12px 14px", color: G.text, fontSize: 13, outline: "none", fontFamily: "inherit", boxSizing: "border-box" },
+  label: { fontSize: 11, color: G.muted, marginBottom: 5, display: "block", letterSpacing: 0.4 },
+  btnGold: { width: "100%", background: G.gold, color: "#1a1208", border: "none", borderRadius: 10, padding: "12px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" },
+  btnGhost: { width: "100%", background: "transparent", color: G.text, border: `1px solid ${G.border}`, borderRadius: 10, padding: "12px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" },
+  btnDark: { width: "100%", background: G.card, color: G.text, border: `1px solid ${G.border}`, borderRadius: 10, padding: "12px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 },
   card: { background: G.card, border: `1px solid ${G.border}`, borderRadius: 18, padding: 18 },
-  divider: { display: "flex", alignItems: "center", gap: 12, color: G.muted, fontSize: 12, margin: "18px 0" },
+  divider: { display: "flex", alignItems: "center", gap: 12, color: G.muted, fontSize: 11, margin: "18px 0" },
   hLine: { flex: 1, height: 1, background: G.border },
 });

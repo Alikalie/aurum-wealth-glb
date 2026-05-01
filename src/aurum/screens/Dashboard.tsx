@@ -62,39 +62,21 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
         <div>
-          <div style={{ fontSize: 13, color: G.muted }}>Welcome back</div>
-          <div style={{ ...s.serif, fontSize: 22, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
-          {profile?.account_number && <div style={{ fontSize: 11, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+          <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
+          <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
+          {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
         </div>
         <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
       </div>
       <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: G.muted, letterSpacing: 0.5 }}>WALLET BALANCE</div>
-        <div style={{ ...s.serif, fontSize: 34, fontWeight: 600, margin: "8px 0 4px" }}>{fmtMoney(wallet, cur)}</div>
-        <div style={{ fontSize: 12, color: G.muted }}>Your money — use it to buy products or withdraw anytime.</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12, paddingTop: 12, borderTop: `1px solid ${G.border}` }}>
-          <span style={{ fontSize: 12, color: G.muted }}>Profit earned (included above)</span>
-          <span style={{ ...s.serif, fontSize: 18, fontWeight: 600, color: G.green }}>+{fmtMoney(profit, cur)}</span>
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-          <button style={{ ...s.btnGold, padding: 12, fontSize: 13 }} onClick={() => navTo("deposit")}>↓ Deposit</button>
-          <button style={{ ...s.btnGhost, padding: 12, fontSize: 13 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
+        <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>WALLET BALANCE</div>
+        <div style={{ ...s.serif, fontSize: 28, fontWeight: 600, margin: "6px 0 4px" }}>{fmtMoney(wallet, cur)}</div>
+        <div style={{ fontSize: 11, color: G.muted }}>Your money — use it to buy products or withdraw anytime.</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button style={{ ...s.btnGold, padding: 11, fontSize: 12 }} onClick={() => navTo("deposit")}>↓ Deposit</button>
+          <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {[
-          { l: "Deposited", v: fmtMoney(deposited, cur) },
-          { l: "Profit", v: fmtMoney(profit, cur) },
-          { l: "Withdrawn", v: fmtMoney(withdrawn, cur) },
-        ].map(x => (
-          <div key={x.l} style={{ ...s.card, flex: 1, padding: 14, textAlign: "center" }}>
-            <div style={{ ...s.serif, fontSize: 14, fontWeight: 600, color: G.gold }}>{x.v}</div>
-            <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{x.l}</div>
-          </div>
-        ))}
-      </div>
-      <button style={{ ...s.btnGhost, marginBottom: 8 }} onClick={() => navTo("deposits-history")}>📥 My deposits & status →</button>
-      <button style={{ ...s.btnGhost, marginBottom: 8 }} onClick={() => navTo("transactions-history")}>📋 Transaction history →</button>
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       <NewsFeed />
     </div>
@@ -281,6 +263,8 @@ function ProfileTab({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
         <button style={{ ...s.btnGhost, padding: 12, fontSize: 13 }} onClick={() => navTo("withdraw")}>Withdraw</button>
         <button style={{ ...s.btnGhost, padding: 12, fontSize: 13 }} onClick={() => navTo("sell")}>Sell</button>
       </div>
+
+      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => navTo("transactions-history")}>📋 Transaction history →</button>
 
       <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, overflow: "hidden" }}>
         <Item label="Dark Mode" right={<Toggle v={themeMode === "dark"} on={() => setThemeMode(themeMode === "dark" ? "light" : "dark")} />} G={G} />

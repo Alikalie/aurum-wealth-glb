@@ -59,12 +59,41 @@ export function TransactionsHistory({ nav }: { nav: (s: string, payload?: any) =
 
   // Compute running balance going backwards in time (oldest -> newest), then map by id
   const runningById = useMemo(() => {
-    const sorted = [...rows].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+    // Sort strictly by created_at ascending; tiebreak on id for stable order
+    const sorted = [...rows].sort((a, b) => {
+      const da = +new Date(a.created_at);
+      const db = +new Date(b.created_at);
+      if (da !== db) return da - db;
+      return a.id.localeCompare(b.id);
+    });
     let bal = 0;
     const map: Record<string, number> = {};
     for (const t of sorted) {
-      // For deposits, withdrawals, earnings, purchases — amount sign already encodes direction
-      bal += Number(t.amount) || 0;
+      const raw = Number(t.amount) || 0;
+      // Force correct sign per kind, regardless of stored value sign
+      const abs = Math.abs(raw);
+      let signed = 0;
+      switch (t.kind) {
+        case "deposit":
+        case "daily_earning":
+        case "product_sale":
+        case "cycle_complete":
+          signed = abs; // credit
+          break;
+        case "withdrawal":
+        case "product_purchase":
+          signed = -abs; // debit
+          break;
+        case "admin_credit":
+          // Admin credit can be positive or negative — trust stored sign
+          signed = raw;
+          break;
+        default:
+          signed = raw;
+      }
+      // Rejected deposit/withdrawal entries are stored as 0 — keep them as 0
+      if (raw === 0) signed = 0;
+      bal += signed;
       map[t.id] = bal;
     }
     return map;
