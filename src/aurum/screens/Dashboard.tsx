@@ -264,6 +264,8 @@ function ProfileTab({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
         <button style={{ ...s.btnGhost, padding: 12, fontSize: 13 }} onClick={() => navTo("sell")}>Sell</button>
       </div>
 
+      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => navTo("transactions-history")}>📋 Transaction history →</button>
+
       <div style={{ background: G.card, border: `1px solid ${G.border}`, borderRadius: 14, overflow: "hidden" }}>
         <Item label="Dark Mode" right={<Toggle v={themeMode === "dark"} on={() => setThemeMode(themeMode === "dark" ? "light" : "dark")} />} G={G} />
         <Item label="Linked Accounts" right={<span style={{ color: G.muted }}>›</span>} act={() => navTo("payment-methods")} G={G} />
