@@ -94,9 +94,6 @@ export function AurumProvider({ children }: { children: ReactNode }) {
             referred_user_id: user.id,
             code: refCode,
           });
-          await supabase.rpc as any;
-          // increment counter best-effort
-          await supabase.from("affiliates").update({ total_referrals: 1 } as any).eq("user_id", aff.user_id).select();
         }
       }
       localStorage.removeItem("aurum-ref-code");
