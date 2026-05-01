@@ -879,3 +879,85 @@ function AuditLog() {
     </div>
   );
 }
+
+function AffiliateAdmin() {
+  const { s, G, toast } = useAurum();
+  const [enabled, setEnabled] = useState(false);
+  const [pct, setPct] = useState<string>("5");
+  const [stats, setStats] = useState<{ affiliates: number; referrals: number; commissions: number }>({ affiliates: 0, referrals: 0, commissions: 0 });
+  const [topAffiliates, setTopAffiliates] = useState<any[]>([]);
+
+  const load = async () => {
+    const { data: settings } = await supabase.from("app_settings").select("*").in("key", ["affiliate_enabled", "affiliate_commission_pct"]);
+    const e = settings?.find((x: any) => x.key === "affiliate_enabled");
+    const p = settings?.find((x: any) => x.key === "affiliate_commission_pct");
+    setEnabled(e?.value === true || e?.value === "true");
+    setPct(String(p?.value ?? 5));
+    const { data: affs } = await supabase.from("affiliates").select("*").order("total_commission", { ascending: false }).limit(20);
+    setTopAffiliates(affs ?? []);
+    const { count: aCount } = await supabase.from("affiliates").select("*", { count: "exact", head: true });
+    const { count: rCount } = await supabase.from("referrals").select("*", { count: "exact", head: true });
+    const totalComm = (affs ?? []).reduce((sum: number, a: any) => sum + Number(a.total_commission || 0), 0);
+    setStats({ affiliates: aCount ?? 0, referrals: rCount ?? 0, commissions: totalComm });
+  };
+  useEffect(() => { load(); }, []);
+
+  const save = async () => {
+    const pctNum = Number(pct);
+    if (isNaN(pctNum) || pctNum < 0 || pctNum > 100) { toast("Commission must be 0–100"); return; }
+    const { error: e1 } = await supabase.from("app_settings").update({ value: enabled as any, updated_at: new Date().toISOString() }).eq("key", "affiliate_enabled");
+    const { error: e2 } = await supabase.from("app_settings").update({ value: pctNum as any, updated_at: new Date().toISOString() }).eq("key", "affiliate_commission_pct");
+    if (e1 || e2) { toast((e1 || e2)!.message); return; }
+    toast("Affiliate settings saved");
+    load();
+  };
+
+  return (
+    <div>
+      <div style={{ ...s.card, padding: 18, marginBottom: 18 }}>
+        <h2 style={{ ...s.serif, fontSize: 18, margin: "0 0 14px" }}>Affiliate Program Controls</h2>
+        <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, cursor: "pointer" }}>
+          <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} style={{ width: 18, height: 18, accentColor: G.gold }} />
+          <span style={{ fontSize: 14, fontWeight: 600 }}>Affiliate program is {enabled ? "ACTIVE" : "DISABLED"}</span>
+        </label>
+        <p style={{ fontSize: 12, color: G.muted, margin: "0 0 14px" }}>When active, the affiliate button appears on users' Home screen and commissions are paid automatically on approved deposits.</p>
+        <label style={s.label}>COMMISSION PERCENTAGE (% of deposit amount)</label>
+        <input style={{ ...s.input, maxWidth: 160 }} type="number" min={0} max={100} step={0.5} value={pct} onChange={e => setPct(e.target.value)} />
+        <div style={{ marginTop: 16 }}>
+          <button style={{ ...s.btnGold, width: "auto", padding: "10px 20px" }} onClick={save}>Save settings</button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <div style={{ ...s.card, flex: 1, padding: 14, textAlign: "center" }}>
+          <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.gold }}>{stats.affiliates}</div>
+          <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Affiliates</div>
+        </div>
+        <div style={{ ...s.card, flex: 1, padding: 14, textAlign: "center" }}>
+          <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.text }}>{stats.referrals}</div>
+          <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Total referrals</div>
+        </div>
+        <div style={{ ...s.card, flex: 1, padding: 14, textAlign: "center" }}>
+          <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.green }}>${stats.commissions.toFixed(2)}</div>
+          <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>Commissions paid</div>
+        </div>
+      </div>
+
+      <h3 style={{ ...s.serif, fontSize: 16, margin: "0 0 10px" }}>Top affiliates</h3>
+      <div style={{ ...s.card, padding: 0, overflow: "hidden" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 140px", padding: "10px 14px", background: G.bg, fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>
+          <span>USER ID</span><span>CODE</span><span>REFERRALS</span><span>COMMISSION</span>
+        </div>
+        {topAffiliates.map(a => (
+          <div key={a.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 140px", padding: "12px 14px", borderTop: `1px solid ${G.border}`, fontSize: 13 }}>
+            <span style={{ fontFamily: "monospace", fontSize: 11 }}>{a.user_id.slice(0, 12)}…</span>
+            <span style={{ fontFamily: "monospace", color: G.gold, fontWeight: 600 }}>{a.code}</span>
+            <span>{a.total_referrals}</span>
+            <span style={{ color: G.green, fontWeight: 600 }}>${Number(a.total_commission).toFixed(2)}</span>
+          </div>
+        ))}
+        {topAffiliates.length === 0 && <div style={{ padding: 20, color: G.muted, fontSize: 13, textAlign: "center" }}>No affiliates yet.</div>}
+      </div>
+    </div>
+  );
+}
