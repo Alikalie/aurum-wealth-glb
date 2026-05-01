@@ -13,12 +13,22 @@ import { TransactionDetails } from "@/aurum/screens/TransactionDetails";
 import { TransactionsHistory } from "@/aurum/screens/TransactionsHistory";
 import { MyProducts } from "@/aurum/screens/MyProducts";
 import { ProductDetails } from "@/aurum/screens/ProductDetails";
+import { Affiliate } from "@/aurum/screens/Affiliate";
 
 function Shell() {
   const { s, G, user, loading } = useAurum();
   const [screen, setScreen] = useState("landing");
   const [txId, setTxId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
+
+  // Capture ?ref= referral code from URL and stash for use after signup
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get("ref");
+    if (ref) {
+      localStorage.setItem("aurum-ref-code", ref.toUpperCase());
+    }
+  }, []);
 
   // Inject fonts + global style once; refresh body bg when palette changes
   useEffect(() => {
@@ -68,6 +78,7 @@ function Shell() {
         {screen === "product-details" && <ProductDetails nav={nav} productId={productId} />}
         {screen === "tx-details" && <TransactionDetails nav={nav} txId={txId} />}
         {screen === "transactions-history" && <TransactionsHistory nav={nav} />}
+        {screen === "affiliate" && <Affiliate nav={nav} />}
         {screen === "support" && <Support nav={nav} />}
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}

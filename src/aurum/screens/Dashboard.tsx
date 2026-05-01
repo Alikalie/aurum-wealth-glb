@@ -52,6 +52,11 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
 
 function HomeTab({ navTo }: { navTo: NavFn }) {
   const { s, G, profile } = useAurum();
+  const [affEnabled, setAffEnabled] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("value").eq("key", "affiliate_enabled").maybeSingle()
+      .then(({ data }) => setAffEnabled(data?.value === true || data?.value === "true"));
+  }, []);
   const deposited = Number(profile?.invested ?? 0);
   const profit = Number(profile?.earned ?? 0);
   const withdrawn = Number(profile?.withdrawn ?? 0);
@@ -78,6 +83,14 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
         </div>
       </div>
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
+      {affEnabled && (
+        <button
+          style={{ ...s.btnGold, marginBottom: 16, background: G.gold, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+          onClick={() => navTo("affiliate")}
+        >
+          <span aria-hidden>★</span> Register / Join Affiliate Program
+        </button>
+      )}
       <NewsFeed />
     </div>
   );

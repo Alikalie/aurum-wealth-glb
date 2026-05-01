@@ -83,6 +83,54 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliates: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          total_commission: number
+          total_referrals: number
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          total_commission?: number
+          total_referrals?: number
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          total_commission?: number
+          total_referrals?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -416,6 +464,33 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          referred_user_id: string
+          referrer_id: string
+          total_commission: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          referred_user_id: string
+          referrer_id: string
+          total_commission?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          referred_user_id?: string
+          referrer_id?: string
+          total_commission?: number
+        }
+        Relationships: []
+      }
       support_content: {
         Row: {
           body: string
@@ -629,6 +704,7 @@ export type Database = {
         Returns: undefined
       }
       purchase_product: { Args: { p_product_id: string }; Returns: string }
+      recompute_user_balances: { Args: { p_user_id?: string }; Returns: number }
       run_daily_payouts: { Args: never; Returns: number }
       unlist_product: {
         Args: { p_user_product_id: string }

@@ -81,6 +81,23 @@ export function AurumProvider({ children }: { children: ReactNode }) {
     }
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     setIsAdmin((roles ?? []).some((r) => r.role === "admin"));
+
+    // Apply pending referral code (if any) — only once per user
+    const refCode = localStorage.getItem("aurum-ref-code");
+    if (refCode) {
+      const { data: existing } = await supabase.from("referrals").select("id").eq("referred_user_id", user.id).maybeSingle();
+      if (!existing) {
+        const { data: aff } = await supabase.from("affiliates").select("user_id").eq("code", refCode).maybeSingle();
+        if (aff && aff.user_id !== user.id) {
+          await supabase.from("referrals").insert({
+            referrer_id: aff.user_id,
+            referred_user_id: user.id,
+            code: refCode,
+          });
+        }
+      }
+      localStorage.removeItem("aurum-ref-code");
+    }
   }, [user]);
 
   useEffect(() => {
