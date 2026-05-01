@@ -5,7 +5,7 @@ import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "audit";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "audit";
 
 function AdminInner() {
   const { s, G, user, isAdmin, loading, signOut } = useAurum();
@@ -17,7 +17,7 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "content", "audit"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "content", "audit"];
   return (
     <div style={{ ...s.app, padding: 24 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -38,6 +38,7 @@ function AdminInner() {
         {tab === "fx" && <FxRates />}
         {tab === "content" && <ContentEditor />}
         {tab === "news" && <NewsAdmin />}
+        {tab === "affiliate" && <AffiliateAdmin />}
         {tab === "audit" && <AuditLog />}
         <Toast />
       </div>
