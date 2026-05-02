@@ -83,27 +83,114 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_applications: {
+        Row: {
+          admin_note: string | null
+          country: string
+          created_at: string
+          full_name: string
+          id: string
+          payment_account: string
+          promo_code: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          country: string
+          created_at?: string
+          full_name: string
+          id?: string
+          payment_account: string
+          promo_code: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          country?: string
+          created_at?: string
+          full_name?: string
+          id?: string
+          payment_account?: string
+          promo_code?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      affiliate_withdrawals: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          id: string
+          payment_account: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          id?: string
+          payment_account: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_account?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       affiliates: {
         Row: {
+          available_balance: number
           code: string
           created_at: string
           id: string
+          payment_account: string | null
+          payment_account_locked: boolean
           total_commission: number
           total_referrals: number
           user_id: string
         }
         Insert: {
+          available_balance?: number
           code: string
           created_at?: string
           id?: string
+          payment_account?: string | null
+          payment_account_locked?: boolean
           total_commission?: number
           total_referrals?: number
           user_id: string
         }
         Update: {
+          available_balance?: number
           code?: string
           created_at?: string
           id?: string
+          payment_account?: string | null
+          payment_account_locked?: boolean
           total_commission?: number
           total_referrals?: number
           user_id?: string
@@ -410,7 +497,10 @@ export type Database = {
           language: string
           last_name: string | null
           payment_edit_locked: boolean
+          payment_locked_until: string | null
           phone: string | null
+          promo_code_used: string | null
+          promo_signup_bonus_paid: boolean
           theme: string
           updated_at: string
           user_id: string
@@ -433,7 +523,10 @@ export type Database = {
           language?: string
           last_name?: string | null
           payment_edit_locked?: boolean
+          payment_locked_until?: string | null
           phone?: string | null
+          promo_code_used?: string | null
+          promo_signup_bonus_paid?: boolean
           theme?: string
           updated_at?: string
           user_id: string
@@ -456,7 +549,10 @@ export type Database = {
           language?: string
           last_name?: string | null
           payment_edit_locked?: boolean
+          payment_locked_until?: string | null
           phone?: string | null
+          promo_code_used?: string | null
+          promo_signup_bonus_paid?: boolean
           theme?: string
           updated_at?: string
           user_id?: string
@@ -468,6 +564,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          first_deposit_bonus_paid: boolean
           id: string
           referred_user_id: string
           referrer_id: string
@@ -476,6 +573,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          first_deposit_bonus_paid?: boolean
           id?: string
           referred_user_id: string
           referrer_id: string
@@ -484,6 +582,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          first_deposit_bonus_paid?: boolean
           id?: string
           referred_user_id?: string
           referrer_id?: string
@@ -614,18 +713,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_super: boolean
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          is_super?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          is_super?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -691,6 +793,7 @@ export type Database = {
     }
     Functions: {
       buy_resale: { Args: { p_user_product_id: string }; Returns: string }
+      demote_admin: { Args: { _target: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -698,11 +801,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_affiliate_eligible: { Args: { _uid: string }; Returns: boolean }
       is_blocked: { Args: { _uid: string }; Returns: boolean }
+      is_super_admin: { Args: { _uid: string }; Returns: boolean }
       list_product_for_sale: {
         Args: { p_price: number; p_user_product_id: string }
         Returns: undefined
       }
+      promote_to_admin: { Args: { _target: string }; Returns: undefined }
       purchase_product: { Args: { p_product_id: string }; Returns: string }
       recompute_user_balances: { Args: { p_user_id?: string }; Returns: number }
       run_daily_payouts: { Args: never; Returns: number }
