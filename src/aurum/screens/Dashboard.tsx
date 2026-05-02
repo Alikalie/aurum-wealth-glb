@@ -88,7 +88,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           style={{ ...s.btnGold, marginBottom: 16, background: G.gold, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
           onClick={() => navTo("affiliate")}
         >
-          <span aria-hidden>★</span> Register / Join Affiliate Program
+          <span aria-hidden>★</span> Affiliate Program
         </button>
       )}
       <NewsFeed />
