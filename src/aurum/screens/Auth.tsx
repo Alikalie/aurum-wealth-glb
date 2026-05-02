@@ -121,6 +121,7 @@ export function Register({ nav }: { nav: (s: string) => void }) {
   const [show, setShow] = useState(false), [load, setLoad] = useState(false);
   const [open, setOpen] = useState(false), [search, setSearch] = useState("");
   const [langOpen, setLangOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState(() => (localStorage.getItem("aurum-ref-code") || "").toUpperCase());
   const filtered = COUNTRIES.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
   // When country changes, suggest its currency
@@ -151,6 +152,7 @@ export function Register({ nav }: { nav: (s: string) => void }) {
           currency,
           language,
           phone: country.dial + phone,
+          promo_code: promoCode.trim().toUpperCase(),
         },
       },
     });
@@ -238,6 +240,10 @@ export function Register({ nav }: { nav: (s: string) => void }) {
 
       <label style={{ ...s.label, marginTop: 14 }}>CONFIRM PASSWORD</label>
       <input style={s.input} type={show ? "text" : "password"} value={pw2} onChange={e => setPw2(e.target.value)} placeholder="••••••••" />
+
+      <label style={{ ...s.label, marginTop: 14 }}>PROMO CODE (OPTIONAL)</label>
+      <input style={{ ...s.input, fontFamily: "monospace", letterSpacing: 1.5, textTransform: "uppercase" }} value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="e.g. JANE1234" maxLength={20} />
+      <p style={{ fontSize: 11, color: G.muted, margin: "6px 2px 0" }}>Have an affiliate code? You get a $1 welcome bonus in your local currency.</p>
 
       <button style={{ ...s.btnGold, marginTop: 22 }} onClick={submit} disabled={load}>{load ? "Creating account…" : "Create account"}</button>
       <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: G.muted }}>

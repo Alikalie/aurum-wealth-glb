@@ -17,10 +17,16 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
   };
   useEffect(refresh, [user]);
 
+  const lockedUntil = profile?.payment_locked_until ? new Date(profile.payment_locked_until) : null;
+  const isLocked = lockedUntil && lockedUntil.getTime() > Date.now();
+  const daysLeft = isLocked ? Math.ceil((lockedUntil!.getTime() - Date.now()) / 86400000) : 0;
+  const hasOne = list.length > 0;
+
   return (
     <ScreenShell title="Linked Accounts" onBack={() => nav("dashboard")}>
       <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
-        Add the accounts you'll use to deposit and receive withdrawals. {profile?.payment_edit_locked && <strong style={{ color: G.gold }}>Editing is locked — contact support to change saved details.</strong>}
+        You can save <strong>only one</strong> payment method. After saving it is locked for <strong>90 days</strong>. To change it, contact support.
+        {isLocked && <><br/><strong style={{ color: G.gold }}>Locked for {daysLeft} more day{daysLeft === 1 ? "" : "s"}.</strong></>}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
@@ -39,7 +45,7 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
         ))}
       </div>
 
-      {!adding ? (
+      {!adding ? (hasOne ? null : (
         <>
           <div style={{ fontSize: 12, color: G.muted, marginBottom: 8, letterSpacing: 0.5 }}>ADD A METHOD</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -48,7 +54,7 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
             <button style={s.btnGhost} onClick={() => setAdding("paypal")}>💳 PayPal</button>
           </div>
         </>
-      ) : (
+      )) : (
         <AddMethodForm type={adding} onDone={() => { setAdding(null); refresh(); }} onCancel={() => setAdding(null)} />
       )}
     </ScreenShell>
