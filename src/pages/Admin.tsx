@@ -969,3 +969,274 @@ function AffiliateAdmin() {
     </div>
   );
 }
+
+// ===== Affiliate applications review =====
+function AffiliateApplications() {
+  const { s, G, toast } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [reject, setReject] = useState<any>(null);
+  const [note, setNote] = useState("");
+
+  const load = async () => {
+    let q = supabase.from("affiliate_applications").select("*").order("created_at", { ascending: false });
+    if (filter === "pending") q = q.eq("status", "pending");
+    const { data } = await q;
+    const list = data ?? [];
+    setRows(list);
+    const ids = list.map((r: any) => r.user_id);
+    if (ids.length) {
+      const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number, currency").in("user_id", ids);
+      const map: Record<string, any> = {};
+      (ps ?? []).forEach((p: any) => { map[p.user_id] = p; });
+      setProfiles(map);
+      // Per-user product counts
+      const cmap: Record<string, number> = {};
+      await Promise.all(ids.map(async (uid: string) => {
+        const { count } = await supabase.from("user_products").select("*", { count: "exact", head: true }).eq("user_id", uid);
+        cmap[uid] = count ?? 0;
+      }));
+      setCounts(cmap);
+    }
+  };
+  useEffect(() => { load(); }, [filter]);
+
+  const approve = async (r: any) => {
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("affiliate_applications").update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", r.id);
+    if (error) { toast(error.message); return; }
+    toast("Application approved — affiliate code is live"); load();
+  };
+  const submitReject = async () => {
+    if (!note.trim()) { toast("Add a reason"); return; }
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("affiliate_applications").update({ status: "rejected", admin_note: note.trim(), reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", reject.id);
+    if (error) { toast(error.message); return; }
+    toast("Declined and user notified"); setReject(null); setNote(""); load();
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(["pending", "all"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.gold : G.card, color: filter === f ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{f.toUpperCase()}</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No applications.</div>}
+        {rows.map(r => {
+          const p = profiles[r.user_id];
+          const cnt = counts[r.user_id] ?? 0;
+          const eligible = cnt >= 5;
+          return (
+            <div key={r.id} style={{ ...s.card, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div style={{ fontWeight: 600 }}>#{p?.account_number} {r.full_name} <span style={{ color: G.muted, fontWeight: 400 }}>({p?.email})</span></div>
+                  <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · {r.country} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}>
+                    Promo code: <strong style={{ color: G.gold, fontFamily: "monospace" }}>{r.promo_code}</strong>
+                  </div>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>Payment account: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
+                  {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                </div>
+                <div style={{ textAlign: "right", minWidth: 140 }}>
+                  <div style={{ fontSize: 11, color: G.muted }}>PRODUCTS PURCHASED</div>
+                  <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: eligible ? G.green : G.red }}>{cnt} / 5</div>
+                  <div style={{ fontSize: 10, color: eligible ? G.green : G.red, fontWeight: 600 }}>{eligible ? "ELIGIBLE" : "NOT ELIGIBLE"}</div>
+                </div>
+              </div>
+              {r.status === "pending" && (
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => approve(r)} disabled={!eligible} title={!eligible ? "User has not purchased 5 products" : ""}>Approve</button>
+                  <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => { setReject(r); setNote(""); }}>Decline…</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {reject && (
+        <div onClick={() => setReject(null)} style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.card, borderRadius: 14, padding: 20, maxWidth: 440, width: "100%", border: `1px solid ${G.border}` }}>
+            <div style={{ ...s.serif, fontSize: 18, marginBottom: 12 }}>Decline application</div>
+            <textarea autoFocus style={{ ...s.input, minHeight: 100, fontFamily: "inherit" }} placeholder="Reason shown to the user" value={note} onChange={e => setNote(e.target.value)} />
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button style={s.btnGhost} onClick={() => setReject(null)}>Cancel</button>
+              <button style={{ ...s.btnGold, background: G.red, color: "#fff" }} onClick={submitReject}>Decline</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Affiliate withdrawal review =====
+function AffiliateWithdrawals() {
+  const { s, G, toast } = useAurum();
+  const [rows, setRows] = useState<any[]>([]);
+  const [filter, setFilter] = useState<"pending" | "all">("pending");
+  const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [reject, setReject] = useState<any>(null);
+  const [note, setNote] = useState("");
+
+  const load = async () => {
+    let q = supabase.from("affiliate_withdrawals").select("*").order("created_at", { ascending: false });
+    if (filter === "pending") q = q.eq("status", "pending");
+    const { data } = await q;
+    const list = data ?? [];
+    setRows(list);
+    const ids = Array.from(new Set(list.map((r: any) => r.user_id)));
+    if (ids.length) {
+      const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number").in("user_id", ids);
+      const map: Record<string, any> = {};
+      (ps ?? []).forEach((p: any) => { map[p.user_id] = p; });
+      setProfiles(map);
+    }
+  };
+  useEffect(() => { load(); }, [filter]);
+
+  const approve = async (r: any) => {
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("affiliate_withdrawals").update({ status: "approved", reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", r.id);
+    if (error) { toast(error.message); return; }
+    toast("Marked paid — affiliate balance debited"); load();
+  };
+  const submitReject = async () => {
+    if (!note.trim()) { toast("Add a reason"); return; }
+    const { data: { user: me } } = await supabase.auth.getUser();
+    const { error } = await supabase.from("affiliate_withdrawals").update({ status: "rejected", admin_note: note.trim(), reviewed_at: new Date().toISOString(), reviewed_by: me?.id }).eq("id", reject.id);
+    if (error) { toast(error.message); return; }
+    toast("Declined"); setReject(null); setNote(""); load();
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(["pending", "all"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? G.gold : G.card, color: filter === f ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "6px 12px", borderRadius: 6, cursor: "pointer", fontSize: 12 }}>{f.toUpperCase()}</button>
+        ))}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {rows.length === 0 && <div style={{ ...s.card, color: G.muted }}>No requests.</div>}
+        {rows.map(r => {
+          const p = profiles[r.user_id];
+          return (
+            <div key={r.id} style={{ ...s.card, padding: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>#{p?.account_number} {p?.full_name} <span style={{ color: G.muted, fontWeight: 400 }}>({p?.email})</span></div>
+                  <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
+                  <div style={{ fontSize: 12, marginTop: 4 }}>Pay to: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
+                  {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                </div>
+                <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>${Number(r.amount).toFixed(2)}</div>
+              </div>
+              {r.status === "pending" && (
+                <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <button style={{ ...s.btnGold, padding: 8, fontSize: 12 }} onClick={() => approve(r)}>Mark Paid</button>
+                  <button style={{ ...s.btnGhost, padding: 8, fontSize: 12 }} onClick={() => { setReject(r); setNote(""); }}>Decline…</button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {reject && (
+        <div onClick={() => setReject(null)} style={{ position: "fixed", inset: 0, background: "#000c", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: G.card, borderRadius: 14, padding: 20, maxWidth: 440, width: "100%", border: `1px solid ${G.border}` }}>
+            <div style={{ ...s.serif, fontSize: 18, marginBottom: 12 }}>Decline withdrawal</div>
+            <textarea autoFocus style={{ ...s.input, minHeight: 100, fontFamily: "inherit" }} placeholder="Reason" value={note} onChange={e => setNote(e.target.value)} />
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button style={s.btnGhost} onClick={() => setReject(null)}>Cancel</button>
+              <button style={{ ...s.btnGold, background: G.red, color: "#fff" }} onClick={submitReject}>Decline</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== Admins management (super admin only) =====
+function AdminsManagement() {
+  const { s, G, toast, user: me } = useAurum();
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+
+  const load = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role, is_super, created_at").eq("role", "admin");
+    const ids = (roles ?? []).map((r: any) => r.user_id);
+    if (!ids.length) { setAdmins([]); return; }
+    const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number").in("user_id", ids);
+    const merged = (roles ?? []).map((r: any) => ({ ...r, profile: (ps ?? []).find((p: any) => p.user_id === r.user_id) }));
+    setAdmins(merged);
+  };
+  useEffect(() => { load(); }, []);
+
+  const search = async () => {
+    if (!q.trim()) { setResults([]); return; }
+    const term = q.trim().toLowerCase();
+    const { data } = await supabase.from("profiles").select("user_id, full_name, email, account_number").or(`email.ilike.%${term}%,full_name.ilike.%${term}%`).limit(20);
+    setResults(data ?? []);
+  };
+
+  const promote = async (uid: string) => {
+    const { error } = await supabase.rpc("promote_to_admin", { _target: uid });
+    if (error) { toast(error.message); return; }
+    toast("Promoted to admin"); setQ(""); setResults([]); load();
+  };
+  const demote = async (uid: string) => {
+    if (!confirm("Demote this admin?")) return;
+    const { error } = await supabase.rpc("demote_admin", { _target: uid });
+    if (error) { toast(error.message); return; }
+    toast("Admin demoted"); load();
+  };
+
+  return (
+    <div>
+      <div style={{ ...s.card, marginBottom: 16 }}>
+        <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>Promote a user to admin</div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input style={{ ...s.input, flex: 1 }} placeholder="Search by email or name" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
+          <button style={{ ...s.btnGold, width: "auto", padding: "10px 16px" }} onClick={search}>Search</button>
+        </div>
+        {results.length > 0 && (
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+            {results.map(r => (
+              <div key={r.user_id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: 8, border: `1px solid ${G.border}`, borderRadius: 8 }}>
+                <div style={{ fontSize: 13 }}>
+                  <div style={{ fontWeight: 600 }}>#{r.account_number} {r.full_name || "—"}</div>
+                  <div style={{ fontSize: 11, color: G.muted }}>{r.email}</div>
+                </div>
+                <button style={{ background: G.gold, color: "#1a1208", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer" }} onClick={() => promote(r.user_id)}>Promote</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <h3 style={{ ...s.serif, fontSize: 16, margin: "0 0 10px" }}>Current admins ({admins.length})</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {admins.map(a => (
+          <div key={a.user_id} style={{ ...s.card, padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div style={{ fontWeight: 600 }}>
+                #{a.profile?.account_number} {a.profile?.full_name || a.profile?.email}
+                {a.is_super && <span style={{ marginLeft: 8, fontSize: 10, color: G.gold, border: `1px solid ${G.gold}`, padding: "2px 8px", borderRadius: 99, fontWeight: 700 }}>SUPER ADMIN</span>}
+              </div>
+              <div style={{ fontSize: 11, color: G.muted }}>{a.profile?.email}</div>
+            </div>
+            {!a.is_super && a.user_id !== me?.id && (
+              <button onClick={() => demote(a.user_id)} style={{ background: "transparent", color: G.red, border: `1px solid ${G.red}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>Demote</button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
