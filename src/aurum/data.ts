@@ -58,6 +58,9 @@ export const BANKS: Record<string, string[]> = {
 };
 
 export const fmtMoney = (amount: number, currency = "USD") => {
+  // Clamp tiny floating-point negatives to 0 so withdrawn balances never display "-$0.00"
+  if (!isFinite(amount)) amount = 0;
+  if (Math.abs(amount) < 0.005) amount = 0;
   try {
     return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
   } catch {
