@@ -19,14 +19,31 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
 
   const lockedUntil = profile?.payment_locked_until ? new Date(profile.payment_locked_until) : null;
   const isLocked = lockedUntil && lockedUntil.getTime() > Date.now();
-  const daysLeft = isLocked ? Math.ceil((lockedUntil!.getTime() - Date.now()) / 86400000) : 0;
   const hasOne = list.length > 0;
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (!isLocked) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [isLocked]);
+  const remainingMs = isLocked ? Math.max(0, lockedUntil!.getTime() - now) : 0;
+  const days = Math.floor(remainingMs / 86400000);
+  const hours = Math.floor((remainingMs % 86400000) / 3600000);
+  const mins = Math.floor((remainingMs % 3600000) / 60000);
+  const secs = Math.floor((remainingMs % 60000) / 1000);
 
   return (
     <ScreenShell title="Linked Accounts" onBack={() => nav("dashboard")}>
       <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
         You can save <strong>only one</strong> payment method. After saving it is locked for <strong>90 days</strong>. To change it, contact support.
-        {isLocked && <><br/><strong style={{ color: G.gold }}>Locked for {daysLeft} more day{daysLeft === 1 ? "" : "s"}.</strong></>}
+        {isLocked && (
+          <>
+            <br/>
+            <strong style={{ color: G.gold }}>
+              🔒 Unlocks in {days}d {String(hours).padStart(2,"0")}:{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+            </strong>
+          </>
+        )}
       </p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
