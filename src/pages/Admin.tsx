@@ -5,10 +5,10 @@ import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "audit";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit";
 
 function AdminInner() {
-  const { s, G, user, isAdmin, loading, signOut } = useAurum();
+  const { s, G, user, isAdmin, isSuperAdmin, loading, signOut, themeMode, setThemeMode } = useAurum();
   const [tab, setTab] = useState<Tab>("users");
 
   useEffect(() => { document.body.style.background = G.bg; document.body.style.margin = "0"; }, [G.bg]);
@@ -17,17 +17,22 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "content", "audit"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "aff_apps", "aff_wd", "content", "audit"];
+  if (isSuperAdmin) tabs.push("admins");
+  const tabLabels: Record<Tab,string> = { users:"Users", deposits:"Deposits", withdrawals:"Withdrawals", products:"Products", accounts:"Accounts", fx:"FX", content:"Content", news:"News", affiliate:"Affiliate", aff_apps:"Aff. Apps", aff_wd:"Aff. Withdrawals", admins:"Admins", audit:"Audit" };
   return (
-    <div style={{ ...s.app, padding: 24 }}>
+    <div style={{ ...s.app, padding: "16px clamp(12px, 3vw, 24px)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h1 style={{ ...s.serif, fontSize: 28, margin: 0 }}>Aurum Admin</h1>
-          <button style={{ ...s.btnGhost, width: "auto", padding: "8px 14px" }} onClick={() => { signOut(); window.location.href = "/"; }}>Sign out</button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 8, flexWrap: "wrap" }}>
+          <h1 style={{ ...s.serif, fontSize: "clamp(20px, 4vw, 28px)", margin: 0 }}>Aurum Admin</h1>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setThemeMode(themeMode === "dark" ? "light" : "dark")} title="Toggle theme" style={{ background: G.card, border: `1px solid ${G.border}`, color: G.text, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 14 }}>{themeMode === "dark" ? "☀️" : "🌙"}</button>
+            <button style={{ ...s.btnGhost, width: "auto", padding: "8px 14px" }} onClick={() => { signOut(); window.location.href = "/"; }}>Sign out</button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 18, flexWrap: "wrap", overflowX: "auto" }}>
           {tabs.map(t => (
-            <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? G.gold : G.card, color: tab === t ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "8px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600, textTransform: "capitalize" }}>{t}</button>
+            <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? G.gold : G.card, color: tab === t ? "#1a1208" : G.text, border: `1px solid ${G.border}`, padding: "8px 12px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{tabLabels[t]}</button>
           ))}
         </div>
         {tab === "users" && <Users />}
@@ -39,6 +44,9 @@ function AdminInner() {
         {tab === "content" && <ContentEditor />}
         {tab === "news" && <NewsAdmin />}
         {tab === "affiliate" && <AffiliateAdmin />}
+        {tab === "aff_apps" && <AffiliateApplications />}
+        {tab === "aff_wd" && <AffiliateWithdrawals />}
+        {tab === "admins" && <AdminsManagement />}
         {tab === "audit" && <AuditLog />}
         <Toast />
       </div>
