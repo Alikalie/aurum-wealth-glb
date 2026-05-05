@@ -1041,6 +1041,7 @@ function AffiliateApplications() {
                   </div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>Payment account: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
                   {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                  {p?.email && <a href={`mailto:${p.email}?subject=Aurum%20Affiliate%20Application`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
                 </div>
                 <div style={{ textAlign: "right", minWidth: 140 }}>
                   <div style={{ fontSize: 11, color: G.muted }}>PRODUCTS PURCHASED</div>
@@ -1132,6 +1133,7 @@ function AffiliateWithdrawals() {
                   <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>Pay to: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
                   {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                  {p?.email && <a href={`mailto:${p.email}?subject=Aurum%20Commission%20Withdrawal`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
                 </div>
                 <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>${Number(r.amount).toFixed(2)}</div>
               </div>
