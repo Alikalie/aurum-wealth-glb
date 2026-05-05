@@ -82,6 +82,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
+      <NotificationsCard />
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       {affEnabled && (
         <button
@@ -180,6 +181,33 @@ function DetailRow({ label, value, G, bold, last, muted, valueColor }: { label: 
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: last ? "none" : `1px solid ${G.border}` }}>
       <span style={{ fontSize: 13, color: muted ? G.muted : G.text }}>{label}</span>
       <span style={{ fontSize: bold ? 16 : 14, fontWeight: bold ? 700 : 600, color: valueColor || (bold ? G.text : G.text) }}>{value}</span>
+    </div>
+  );
+}
+
+function NotificationsCard() {
+  const { s, G, user } = useAurum();
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("notifications").select("*").eq("user_id", user.id).is("read_at", null).order("created_at", { ascending: false }).limit(5)
+      .then(({ data }) => setItems(data ?? []));
+  }, [user]);
+  if (!user || items.length === 0) return null;
+  const dismiss = async (id: string) => {
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    setItems(items.filter(i => i.id !== id));
+  };
+  return (
+    <div style={{ ...s.card, padding: 14, marginBottom: 16 }}>
+      <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5, marginBottom: 4 }}>NOTIFICATIONS</div>
+      {items.map(n => (
+        <div key={n.id} style={{ borderTop: `1px solid ${G.border}`, paddingTop: 10, marginTop: 10, position: "relative", paddingRight: 22 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: n.kind === "approved" ? G.green : n.kind === "rejected" ? G.red : G.text }}>{n.title}</div>
+          {n.body && <div style={{ fontSize: 12, color: G.muted, whiteSpace: "pre-wrap", marginTop: 4 }}>{n.body}</div>}
+          <button onClick={() => dismiss(n.id)} style={{ position: "absolute", top: 6, right: 0, background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 16 }}>×</button>
+        </div>
+      ))}
     </div>
   );
 }

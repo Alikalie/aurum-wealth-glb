@@ -273,6 +273,7 @@ function Deposits() {
                 <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · {r.method_type} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                 {r.proof_url && <button onClick={() => setProofUrl(r.proof_url)} style={{ background: "none", border: "none", color: G.gold, fontSize: 12, cursor: "pointer", marginTop: 4, padding: 0 }}>📎 View proof</button>}
                 {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                {r.profiles?.email && <a href={`mailto:${r.profiles.email}?subject=Aurum%20Deposit%20%23${r.id.slice(0,8)}`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
               </div>
               <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>{fmtMoney(Number(r.amount), r.profiles?.currency)}</div>
             </div>
@@ -354,6 +355,7 @@ function Withdrawals() {
                 <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                 <div style={{ fontSize: 12, marginTop: 4 }}>To: {r.payment_methods?.method_type} · {r.payment_methods?.provider_name || "PayPal"} · {r.payment_methods?.account_number || r.payment_methods?.paypal_email} ({r.payment_methods?.account_holder_name})</div>
                 {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                {r.profiles?.email && <a href={`mailto:${r.profiles.email}?subject=Aurum%20Withdrawal%20%23${r.id.slice(0,8)}`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
               </div>
               <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>{fmtMoney(Number(r.amount), r.profiles?.currency)}</div>
             </div>
@@ -1041,6 +1043,7 @@ function AffiliateApplications() {
                   </div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>Payment account: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
                   {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                  {p?.email && <a href={`mailto:${p.email}?subject=Aurum%20Affiliate%20Application`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
                 </div>
                 <div style={{ textAlign: "right", minWidth: 140 }}>
                   <div style={{ fontSize: 11, color: G.muted }}>PRODUCTS PURCHASED</div>
@@ -1132,6 +1135,7 @@ function AffiliateWithdrawals() {
                   <div style={{ fontSize: 12, color: G.muted }}>{new Date(r.created_at).toLocaleString()} · <strong style={{ color: r.status === "approved" ? G.green : r.status === "rejected" ? G.red : G.amber }}>{r.status}</strong></div>
                   <div style={{ fontSize: 12, marginTop: 4 }}>Pay to: <span style={{ color: G.muted }}>{r.payment_account}</span></div>
                   {r.admin_note && <div style={{ fontSize: 11, color: G.muted, marginTop: 4, fontStyle: "italic" }}>Note: {r.admin_note}</div>}
+                  {p?.email && <a href={`mailto:${p.email}?subject=Aurum%20Commission%20Withdrawal`} style={{ display: "inline-block", marginTop: 6, fontSize: 11, color: G.gold, textDecoration: "underline" }}>✉ Email user</a>}
                 </div>
                 <div style={{ ...s.serif, fontSize: 20, color: G.gold }}>${Number(r.amount).toFixed(2)}</div>
               </div>
