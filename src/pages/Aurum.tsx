@@ -14,6 +14,7 @@ import { TransactionsHistory } from "@/aurum/screens/TransactionsHistory";
 import { MyProducts } from "@/aurum/screens/MyProducts";
 import { ProductDetails } from "@/aurum/screens/ProductDetails";
 import { Affiliate } from "@/aurum/screens/Affiliate";
+import { ServiceGate } from "@/aurum/ServiceGate";
 
 function Shell() {
   const { s, G, user, loading } = useAurum();
@@ -62,6 +63,7 @@ function Shell() {
   };
 
   return (
+    <ServiceGate>
     <div style={s.app}>
       <div style={s.phone}>
         {screen === "landing" && <Landing nav={nav} />}
@@ -85,6 +87,7 @@ function Shell() {
         <Toast />
       </div>
     </div>
+    </ServiceGate>
   );
 }
 

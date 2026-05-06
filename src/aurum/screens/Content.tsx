@@ -2,13 +2,18 @@ import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
+import { ContactButtons } from "../SupportContacts";
 
 export function Support({ nav }: { nav: (s: string) => void }) {
-  const { G } = useAurum();
+  const { G, s } = useAurum();
   const [body, setBody] = useState("Loading…");
   useEffect(() => { supabase.from("support_content").select("body").eq("id", 1).maybeSingle().then(({ data }) => setBody(data?.body ?? "")); }, []);
   return (
     <ScreenShell title="Help & Support" onBack={() => nav("dashboard")}>
+      <div style={{ marginBottom: 18 }}>
+        <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600, marginBottom: 10 }}>CONTACT US</div>
+        <ContactButtons />
+      </div>
       <div style={{ color: G.text, fontSize: 14, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{body}</div>
     </ScreenShell>
   );

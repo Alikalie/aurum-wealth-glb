@@ -750,6 +750,7 @@ export type Database = {
           created_at: string
           id: string
           is_super: boolean
+          is_super_super: boolean
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -757,6 +758,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_super?: boolean
+          is_super_super?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -764,6 +766,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_super?: boolean
+          is_super_super?: boolean
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -840,11 +843,21 @@ export type Database = {
       is_affiliate_eligible: { Args: { _uid: string }; Returns: boolean }
       is_blocked: { Args: { _uid: string }; Returns: boolean }
       is_super_admin: { Args: { _uid: string }; Returns: boolean }
+      is_super_super_admin: { Args: { _uid: string }; Returns: boolean }
       list_product_for_sale: {
         Args: { p_price: number; p_user_product_id: string }
         Returns: undefined
       }
-      promote_to_admin: { Args: { _target: string }; Returns: undefined }
+      promote_admin_by_email: {
+        Args: { _email: string; _make_super?: boolean }
+        Returns: undefined
+      }
+      promote_to_admin:
+        | { Args: { _target: string }; Returns: undefined }
+        | {
+            Args: { _make_super?: boolean; _target: string }
+            Returns: undefined
+          }
       purchase_product: { Args: { p_product_id: string }; Returns: string }
       recompute_user_balances: { Args: { p_user_id?: string }; Returns: number }
       run_daily_payouts: { Args: never; Returns: number }
