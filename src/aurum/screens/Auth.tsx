@@ -5,6 +5,7 @@ import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import { NewsFeed } from "./NewsFeed";
+import { ContactButtons } from "../SupportContacts";
 
 const FEATURES = [
   { icon: "◆", t: "Zero commission trades", d: "Trade stocks and ETFs with no fees, ever. Keep more of what you earn." },
@@ -39,6 +40,18 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         <button style={s.btnGold} onClick={() => nav("register")}>Get Started — Create Account</button>
         <button style={s.btnGhost} onClick={() => nav("login")}>Sign in to Aurum</button>
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
+      </div>
+
+      <div style={{ padding: "20px 22px 0" }}>
+        <div style={{ background: G.card, border: `1px dashed ${G.gold}`, borderRadius: 14, padding: 16, textAlign: "center" }}>
+          <div style={{ ...s.serif, fontSize: 16, fontWeight: 700, color: G.gold, marginBottom: 4 }}>📱 Mobile app coming soon</div>
+          <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.5 }}>Download the Aurum app for iOS & Android — launching soon. Use the web app in the meantime.</div>
+        </div>
+      </div>
+
+      <div style={{ padding: "20px 22px 0" }}>
+        <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600, marginBottom: 10 }}>NEED HELP?</div>
+        <ContactButtons />
       </div>
 
       <div id="aurum-news" style={{ padding: "32px 22px 0" }}>
