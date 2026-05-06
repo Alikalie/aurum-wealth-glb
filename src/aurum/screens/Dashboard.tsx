@@ -82,7 +82,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
-      <NotificationsCard />
+      <NotificationsCard navTo={navTo} />
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       {affEnabled && (
         <button
@@ -185,7 +185,7 @@ function DetailRow({ label, value, G, bold, last, muted, valueColor }: { label: 
   );
 }
 
-function NotificationsCard() {
+function NotificationsCard({ navTo }: { navTo: NavFn }) {
   const { s, G, user } = useAurum();
   const [items, setItems] = useState<any[]>([]);
   useEffect(() => {
@@ -198,14 +198,27 @@ function NotificationsCard() {
     await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
     setItems(items.filter(i => i.id !== id));
   };
+  const markAllRead = async () => {
+    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("user_id", user.id).is("read_at", null);
+    setItems([]);
+  };
+  const goTo = (n: any) => {
+    if (n.reference_table === "deposits") navTo("deposits-history");
+    else if (n.reference_table === "withdrawals") navTo("transactions-history");
+    else if (n.reference_table === "affiliate_applications" || n.reference_table === "affiliate_withdrawals") navTo("affiliate");
+    else if (n.reference_table === "user_products" && n.reference_id) navTo("product-details", n.reference_id);
+  };
   return (
     <div style={{ ...s.card, padding: 14, marginBottom: 16 }}>
-      <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5, marginBottom: 4 }}>NOTIFICATIONS</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+        <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>NOTIFICATIONS</div>
+        <button onClick={markAllRead} style={{ background: "none", border: "none", color: G.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>Mark all as read</button>
+      </div>
       {items.map(n => (
-        <div key={n.id} style={{ borderTop: `1px solid ${G.border}`, paddingTop: 10, marginTop: 10, position: "relative", paddingRight: 22 }}>
+        <div key={n.id} onClick={() => goTo(n)} style={{ borderTop: `1px solid ${G.border}`, paddingTop: 10, marginTop: 10, position: "relative", paddingRight: 22, cursor: n.reference_table ? "pointer" : "default" }}>
           <div style={{ fontWeight: 600, fontSize: 13, color: n.kind === "approved" ? G.green : n.kind === "rejected" ? G.red : G.text }}>{n.title}</div>
           {n.body && <div style={{ fontSize: 12, color: G.muted, whiteSpace: "pre-wrap", marginTop: 4 }}>{n.body}</div>}
-          <button onClick={() => dismiss(n.id)} style={{ position: "absolute", top: 6, right: 0, background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 16 }}>×</button>
+          <button onClick={(e) => { e.stopPropagation(); dismiss(n.id); }} style={{ position: "absolute", top: 6, right: 0, background: "none", border: "none", color: G.muted, cursor: "pointer", fontSize: 16 }}>×</button>
         </div>
       ))}
     </div>
