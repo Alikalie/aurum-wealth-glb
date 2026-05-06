@@ -1170,13 +1170,15 @@ function AffiliateWithdrawals() {
 
 // ===== Admins management (super admin only) =====
 function AdminsManagement() {
-  const { s, G, toast, user: me } = useAurum();
+  const { s, G, toast, user: me, isSuperSuperAdmin } = useAurum();
   const [admins, setAdmins] = useState<any[]>([]);
   const [q, setQ] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const [emailPromote, setEmailPromote] = useState("");
+  const [makeSuper, setMakeSuper] = useState(false);
 
   const load = async () => {
-    const { data: roles } = await supabase.from("user_roles").select("user_id, role, is_super, created_at").eq("role", "admin");
+    const { data: roles } = await supabase.from("user_roles").select("user_id, role, is_super, is_super_super, created_at").eq("role", "admin");
     const ids = (roles ?? []).map((r: any) => r.user_id);
     if (!ids.length) { setAdmins([]); return; }
     const { data: ps } = await supabase.from("profiles").select("user_id, full_name, email, account_number").in("user_id", ids);
@@ -1193,9 +1195,15 @@ function AdminsManagement() {
   };
 
   const promote = async (uid: string) => {
-    const { error } = await supabase.rpc("promote_to_admin", { _target: uid });
+    const { error } = await supabase.rpc("promote_to_admin", { _target: uid, _make_super: makeSuper });
     if (error) { toast(error.message); return; }
-    toast("Promoted to admin"); setQ(""); setResults([]); load();
+    toast(makeSuper ? "Promoted to super admin" : "Promoted to admin"); setQ(""); setResults([]); setMakeSuper(false); load();
+  };
+  const promoteByEmail = async () => {
+    if (!emailPromote.trim()) { toast("Enter an email"); return; }
+    const { error } = await supabase.rpc("promote_admin_by_email", { _email: emailPromote.trim(), _make_super: makeSuper });
+    if (error) { toast(error.message); return; }
+    toast("Promoted"); setEmailPromote(""); setMakeSuper(false); load();
   };
   const demote = async (uid: string) => {
     if (!confirm("Demote this admin?")) return;
@@ -1208,6 +1216,18 @@ function AdminsManagement() {
     <div>
       <div style={{ ...s.card, marginBottom: 16 }}>
         <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>Promote a user to admin</div>
+        {isSuperSuperAdmin && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input style={{ ...s.input, flex: 1 }} placeholder="Promote by email" value={emailPromote} onChange={e => setEmailPromote(e.target.value)} />
+              <button style={{ ...s.btnGold, width: "auto", padding: "10px 16px" }} onClick={promoteByEmail}>Promote by email</button>
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 12, color: G.muted, cursor: "pointer" }}>
+              <input type="checkbox" checked={makeSuper} onChange={e => setMakeSuper(e.target.checked)} style={{ accentColor: G.gold }} />
+              Grant Super Admin (only super-super admin can do this)
+            </label>
+          </div>
+        )}
         <div style={{ display: "flex", gap: 8 }}>
           <input style={{ ...s.input, flex: 1 }} placeholder="Search by email or name" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === "Enter" && search()} />
           <button style={{ ...s.btnGold, width: "auto", padding: "10px 16px" }} onClick={search}>Search</button>
@@ -1234,16 +1254,103 @@ function AdminsManagement() {
             <div>
               <div style={{ fontWeight: 600 }}>
                 #{a.profile?.account_number} {a.profile?.full_name || a.profile?.email}
+                {a.is_super_super && <span style={{ marginLeft: 8, fontSize: 10, color: "#fff", background: G.gold, padding: "2px 8px", borderRadius: 99, fontWeight: 700 }}>SUPER-SUPER</span>}
                 {a.is_super && <span style={{ marginLeft: 8, fontSize: 10, color: G.gold, border: `1px solid ${G.gold}`, padding: "2px 8px", borderRadius: 99, fontWeight: 700 }}>SUPER ADMIN</span>}
               </div>
               <div style={{ fontSize: 11, color: G.muted }}>{a.profile?.email}</div>
             </div>
-            {!a.is_super && a.user_id !== me?.id && (
+            {!a.is_super_super && a.user_id !== me?.id && (!a.is_super || isSuperSuperAdmin) && (
               <button onClick={() => demote(a.user_id)} style={{ background: "transparent", color: G.red, border: `1px solid ${G.red}`, borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>Demote</button>
             )}
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ===== Support contacts editor =====
+function SupportContactsEditor() {
+  const { s, G, toast } = useAurum();
+  const [v, setV] = useState<any>({ whatsapp: "", email: "", phone: "", whatsapp_group: "", whatsapp_channel: "", telegram_channel: "" });
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("value").eq("key", "support_contacts").maybeSingle()
+      .then(({ data }) => { if (data?.value) setV({ ...v, ...(data.value as any) }); setLoaded(true); });
+    // eslint-disable-next-line
+  }, []);
+  const save = async () => {
+    const { error } = await supabase.from("app_settings").update({ value: v as any, updated_at: new Date().toISOString() }).eq("key", "support_contacts");
+    if (error) { toast(error.message); return; }
+    toast("Contacts saved");
+  };
+  if (!loaded) return <div style={{ color: G.muted }}>Loading…</div>;
+  const fields: { k: string; l: string; ph: string }[] = [
+    { k: "whatsapp", l: "WhatsApp number (with country code, digits only)", ph: "e.g. 233244000000" },
+    { k: "email", l: "Support email", ph: "support@aurum.com" },
+    { k: "phone", l: "Call number", ph: "+1 555 0100" },
+    { k: "whatsapp_group", l: "Join WhatsApp group link", ph: "https://chat.whatsapp.com/..." },
+    { k: "whatsapp_channel", l: "WhatsApp channel link", ph: "https://whatsapp.com/channel/..." },
+    { k: "telegram_channel", l: "Telegram channel link", ph: "https://t.me/..." },
+  ];
+  return (
+    <div style={{ ...s.card, padding: 18, maxWidth: 640 }}>
+      <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Support contact buttons</div>
+      <div style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>These appear on the landing page and Support screen, plus the country-blocked notice. Leave blank to hide a button.</div>
+      {fields.map(f => (
+        <div key={f.k} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.4, marginBottom: 4 }}>{f.l.toUpperCase()}</div>
+          <input style={s.input} placeholder={f.ph} value={v[f.k] || ""} onChange={e => setV({ ...v, [f.k]: e.target.value })} />
+        </div>
+      ))}
+      <button style={{ ...s.btnGold, marginTop: 10 }} onClick={save}>Save</button>
+    </div>
+  );
+}
+
+// ===== Service status (super-super only) =====
+function ServiceStatusAdmin() {
+  const { s, G, toast } = useAurum();
+  const [enabled, setEnabled] = useState(true);
+  const [blocked, setBlocked] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    supabase.from("app_settings").select("value").eq("key", "service_status").maybeSingle().then(({ data }) => {
+      const v = (data?.value as any) || { enabled: true, blocked_countries: [] };
+      setEnabled(!!v.enabled); setBlocked(v.blocked_countries || []); setLoaded(true);
+    });
+  }, []);
+  const save = async () => {
+    const { error } = await supabase.from("app_settings").update({ value: { enabled, blocked_countries: blocked } as any, updated_at: new Date().toISOString() }).eq("key", "service_status");
+    if (error) { toast(error.message); return; }
+    toast("Service status saved");
+  };
+  const toggleCountry = (code: string) => {
+    setBlocked(b => b.includes(code) ? b.filter(c => c !== code) : [...b, code]);
+  };
+  if (!loaded) return <div style={{ color: G.muted }}>Loading…</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 6 }}>Master Service Switch</div>
+        <p style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>Turn the entire system off for ALL non-admin users. They'll see the "service unavailable" screen with the support contact buttons.</p>
+        <button onClick={() => setEnabled(!enabled)} style={{ width: "100%", padding: 18, fontSize: 16, fontWeight: 700, borderRadius: 12, border: "none", cursor: "pointer", background: enabled ? G.green : G.red, color: "#fff" }}>
+          {enabled ? "✓ SERVICE IS ON — Click to TURN OFF" : "✕ SERVICE IS OFF — Click to TURN ON"}
+        </button>
+      </div>
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 6 }}>Blocked countries ({blocked.length})</div>
+        <p style={{ fontSize: 12, color: G.muted, marginBottom: 12 }}>Tick any country to block users from that country only.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 6, maxHeight: 360, overflowY: "auto", padding: 8, border: `1px solid ${G.border}`, borderRadius: 8 }}>
+          {COUNTRIES.map(c => (
+            <label key={c.code} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "4px 6px", cursor: "pointer", background: blocked.includes(c.code) ? G.red + "22" : "transparent", borderRadius: 6 }}>
+              <input type="checkbox" checked={blocked.includes(c.code)} onChange={() => toggleCountry(c.code)} style={{ accentColor: G.red }} />
+              <span>{c.flag} {c.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+      <button style={{ ...s.btnGold, alignSelf: "flex-start", padding: "10px 24px" }} onClick={save}>Save service status</button>
     </div>
   );
 }
