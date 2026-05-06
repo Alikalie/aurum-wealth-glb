@@ -35,6 +35,7 @@ type Ctx = {
   profile: Profile | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isSuperSuperAdmin: boolean;
   loading: boolean;
   themeMode: ThemeMode;
   G: typeof PALETTES["dark"];
@@ -54,6 +55,7 @@ export function AurumProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isSuperSuperAdmin, setIsSuperSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") return "dark";
@@ -83,10 +85,11 @@ export function AurumProvider({ children }: { children: ReactNode }) {
         i18n.changeLanguage(p.language);
       }
     }
-    const { data: roles } = await supabase.from("user_roles").select("role, is_super").eq("user_id", user.id);
+    const { data: roles } = await supabase.from("user_roles").select("role, is_super, is_super_super").eq("user_id", user.id);
     const adminRows = (roles ?? []).filter((r: any) => r.role === "admin");
     setIsAdmin(adminRows.length > 0);
     setIsSuperAdmin(adminRows.some((r: any) => r.is_super === true));
+    setIsSuperSuperAdmin(adminRows.some((r: any) => r.is_super_super === true));
 
     // Apply pending referral code (if any) — only once per user
     const refCode = localStorage.getItem("aurum-ref-code");
@@ -129,11 +132,11 @@ export function AurumProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setProfile(null); setIsAdmin(false); setIsSuperAdmin(false);
+    setProfile(null); setIsAdmin(false); setIsSuperAdmin(false); setIsSuperSuperAdmin(false);
   }, []);
 
   return (
-    <AurumCtx.Provider value={{ user, session, profile, isAdmin, isSuperAdmin, loading, themeMode, G, s, toast, toastMsg, setThemeMode, refreshProfile, signOut }}>
+    <AurumCtx.Provider value={{ user, session, profile, isAdmin, isSuperAdmin, isSuperSuperAdmin, loading, themeMode, G, s, toast, toastMsg, setThemeMode, refreshProfile, signOut }}>
       {children}
     </AurumCtx.Provider>
   );
