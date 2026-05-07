@@ -11,6 +11,9 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showWd, setShowWd] = useState(false);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [wdHistory, setWdHistory] = useState<any[]>([]);
 
   // Form state
   const [fullName, setFullName] = useState(profile?.full_name || "");
@@ -39,6 +42,36 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
     setAff(a);
     const { data: ap } = await supabase.from("affiliate_applications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).maybeSingle();
     setApp(ap);
+    if (a) {
+      const { data: refs } = await supabase
+        .from("referrals")
+        .select("id, code, created_at, first_deposit_bonus_paid, total_commission, referred_user_id, profiles:profiles!referrals_referred_user_id_fkey(full_name,email)")
+        .eq("referrer_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      // Fallback if FK join not configured: do a simple fetch
+      if (refs) setReferrals(refs);
+      else {
+        const { data: simpleRefs } = await supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false }).limit(20);
+        setReferrals(simpleRefs ?? []);
+      }
+      const { data: tx } = await supabase
+        .from("transactions")
+        .select("id,amount,note,created_at,kind")
+        .eq("user_id", user.id)
+        .eq("kind", "admin_credit")
+        .ilike("note", "%Affiliate%")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setCommissions(tx ?? []);
+      const { data: wds } = await supabase
+        .from("affiliate_withdrawals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setWdHistory(wds ?? []);
+    }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user]);
