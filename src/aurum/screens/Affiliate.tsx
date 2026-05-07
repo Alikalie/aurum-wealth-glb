@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
+import { MOBILE_MONEY, BANKS } from "../data";
 import { supabase } from "@/integrations/supabase/client";
+import { Smartphone, Building2, CreditCard, AlertTriangle, Lock } from "lucide-react";
 
 export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast } = useAurum();
@@ -19,7 +21,10 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [country, setCountry] = useState(profile?.country_name || "");
   const [promoCode, setPromoCode] = useState("");
-  const [paymentAccount, setPaymentAccount] = useState("");
+  const [payMethod, setPayMethod] = useState<"mobile_money" | "bank" | "paypal">("mobile_money");
+  const [payProvider, setPayProvider] = useState("");
+  const [payNumber, setPayNumber] = useState("");
+  const [payHolder, setPayHolder] = useState(profile?.full_name || "");
   const [wdAmount, setWdAmount] = useState("");
 
   if (!user) {
@@ -75,14 +80,22 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const eligible = productCount >= 5;
 
   const submitApplication = async () => {
-    if (!fullName.trim() || !country.trim() || !promoCode.trim() || !paymentAccount.trim()) {
+    if (!fullName.trim() || !country.trim() || !promoCode.trim()) {
       toast("Fill all fields"); return;
     }
     const code = promoCode.trim().toUpperCase();
     if (!/^[A-Z0-9]{4,12}$/.test(code)) { toast("Promo code: 4–12 letters/numbers"); return; }
+    if (!payHolder.trim()) { toast("Enter account holder name"); return; }
+    if (payMethod !== "paypal" && !payProvider.trim()) { toast("Select a provider"); return; }
+    if (!payNumber.trim()) { toast(payMethod === "paypal" ? "Enter PayPal email" : "Enter account number"); return; }
+    if (payMethod === "paypal" && !payNumber.includes("@")) { toast("Enter valid PayPal email"); return; }
+    const methodLabel = payMethod === "mobile_money" ? "Mobile Money" : payMethod === "bank" ? "Bank" : "PayPal";
+    const paymentAccount = `${methodLabel} — ${payMethod === "paypal" ? "PayPal" : payProvider} | ${payNumber.trim()} | ${payHolder.trim()}`;
+    const ok = window.confirm(`⚠️ FINAL WARNING\n\nYour commission account will be LOCKED for 365 days.\n\n${paymentAccount}\n\nIs every detail correct?`);
+    if (!ok) return;
     const { error } = await supabase.from("affiliate_applications").insert({
       user_id: user.id, full_name: fullName.trim(), country: country.trim(),
-      promo_code: code, payment_account: paymentAccount.trim(), status: "pending",
+      promo_code: code, payment_account: paymentAccount, status: "pending",
     });
     if (error) { toast(error.message); return; }
     toast("Application submitted — admin will review");
@@ -237,7 +250,7 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
           {app.admin_note && <p style={{ color: G.muted, fontSize: 13, marginTop: 8, fontStyle: "italic" }}>{app.admin_note}</p>}
           <button style={{ ...s.btnGold, marginTop: 14 }} onClick={() => setShowForm(true)}>Re-apply</button>
         </div>
-        {showForm && <ApplicationForm fullName={fullName} setFullName={setFullName} country={country} setCountry={setCountry} promoCode={promoCode} setPromoCode={setPromoCode} paymentAccount={paymentAccount} setPaymentAccount={setPaymentAccount} onSubmit={submitApplication} s={s} G={G} />}
+        {showForm && <ApplicationForm fullName={fullName} setFullName={setFullName} country={country} setCountry={setCountry} promoCode={promoCode} setPromoCode={setPromoCode} payMethod={payMethod} setPayMethod={setPayMethod} payProvider={payProvider} setPayProvider={setPayProvider} payNumber={payNumber} setPayNumber={setPayNumber} payHolder={payHolder} setPayHolder={setPayHolder} countryCode={profile?.country_code || ""} onSubmit={submitApplication} s={s} G={G} />}
       </ScreenShell>
     );
   }
@@ -266,13 +279,14 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
         <button style={s.btnGold} onClick={() => setShowForm(true)}>Apply for affiliate access</button>
       )}
       {eligible && showForm && (
-        <ApplicationForm fullName={fullName} setFullName={setFullName} country={country} setCountry={setCountry} promoCode={promoCode} setPromoCode={setPromoCode} paymentAccount={paymentAccount} setPaymentAccount={setPaymentAccount} onSubmit={submitApplication} s={s} G={G} />
+        <ApplicationForm fullName={fullName} setFullName={setFullName} country={country} setCountry={setCountry} promoCode={promoCode} setPromoCode={setPromoCode} payMethod={payMethod} setPayMethod={setPayMethod} payProvider={payProvider} setPayProvider={setPayProvider} payNumber={payNumber} setPayNumber={setPayNumber} payHolder={payHolder} setPayHolder={setPayHolder} countryCode={profile?.country_code || ""} onSubmit={submitApplication} s={s} G={G} />
       )}
     </ScreenShell>
   );
 }
 
-function ApplicationForm({ fullName, setFullName, country, setCountry, promoCode, setPromoCode, paymentAccount, setPaymentAccount, onSubmit, s, G }: any) {
+function ApplicationForm({ fullName, setFullName, country, setCountry, promoCode, setPromoCode, payMethod, setPayMethod, payProvider, setPayProvider, payNumber, setPayNumber, payHolder, setPayHolder, countryCode, onSubmit, s, G }: any) {
+  const providerOptions = payMethod === "mobile_money" ? MOBILE_MONEY[countryCode] ?? [] : payMethod === "bank" ? BANKS[countryCode] ?? [] : [];
   return (
     <div style={{ ...s.card, marginTop: 16 }}>
       <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginBottom: 12 }}>Application details</div>
@@ -283,9 +297,50 @@ function ApplicationForm({ fullName, setFullName, country, setCountry, promoCode
       <label style={{ ...s.label, marginTop: 12 }}>PREFERRED PROMO CODE</label>
       <input style={{ ...s.input, fontFamily: "monospace", textTransform: "uppercase", letterSpacing: 1.5 }} value={promoCode} onChange={(e: any) => setPromoCode(e.target.value.toUpperCase())} placeholder="e.g. JANE2025" maxLength={12} />
       <p style={{ fontSize: 10, color: G.muted, margin: "4px 2px 0" }}>4–12 letters and numbers. New users use this code at signup.</p>
-      <label style={{ ...s.label, marginTop: 12 }}>PAYMENT ACCOUNT FOR COMMISSIONS</label>
-      <textarea style={{ ...s.input, minHeight: 70, fontFamily: "inherit" }} value={paymentAccount} onChange={(e: any) => setPaymentAccount(e.target.value)} placeholder="PayPal email, mobile money number with provider, or bank details" />
-      <p style={{ fontSize: 10, color: G.muted, margin: "4px 2px 0" }}>Locked once approved — contact admin to change.</p>
+
+      <div style={{ background: "#fff3cd22", border: `1px solid ${G.gold}`, borderRadius: 10, padding: 12, marginTop: 16, display: "flex", gap: 8 }}>
+        <AlertTriangle size={18} color={G.gold} style={{ flexShrink: 0, marginTop: 1 }} />
+        <div style={{ fontSize: 11, lineHeight: 1.5, color: G.text }}>
+          <strong style={{ color: G.gold }}>STRONG WARNING</strong> — this commission account will be <strong>LOCKED for 365 days</strong> after approval. All commission payouts go here. Verify carefully — wrong details = lost funds. To change, contact admin.
+        </div>
+      </div>
+
+      <label style={{ ...s.label, marginTop: 14 }}>COMMISSION PAYMENT METHOD</label>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {[
+          { v: "mobile_money", l: "Mobile Money", I: Smartphone },
+          { v: "bank", l: "Bank", I: Building2 },
+          { v: "paypal", l: "PayPal", I: CreditCard },
+        ].map(m => {
+          const active = payMethod === m.v;
+          const Icon = m.I;
+          return (
+            <button key={m.v} onClick={() => { setPayMethod(m.v); setPayProvider(""); setPayNumber(""); }}
+              style={{ flex: 1, padding: "10px 4px", background: active ? G.gold : "transparent", color: active ? "#1a1208" : G.text, border: `1px solid ${active ? G.gold : G.border}`, borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <Icon size={18} />{m.l}
+            </button>
+          );
+        })}
+      </div>
+
+      {payMethod !== "paypal" && (
+        <>
+          <label style={s.label}>{payMethod === "mobile_money" ? "PROVIDER" : "BANK"}</label>
+          {providerOptions.length > 0 ? (
+            <select style={{ ...s.input, appearance: "none" }} value={payProvider} onChange={(e: any) => setPayProvider(e.target.value)}>
+              <option value="">Select…</option>
+              {providerOptions.map((p: string) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          ) : (
+            <input style={s.input} placeholder="Provider name" value={payProvider} onChange={(e: any) => setPayProvider(e.target.value)} />
+          )}
+        </>
+      )}
+      <label style={{ ...s.label, marginTop: 10 }}>{payMethod === "paypal" ? "PAYPAL EMAIL" : payMethod === "mobile_money" ? "PHONE / ACCOUNT NUMBER" : "ACCOUNT NUMBER"}</label>
+      <input style={s.input} value={payNumber} onChange={(e: any) => setPayNumber(e.target.value)} placeholder={payMethod === "paypal" ? "you@example.com" : ""} />
+      <label style={{ ...s.label, marginTop: 10 }}>ACCOUNT HOLDER NAME</label>
+      <input style={s.input} value={payHolder} onChange={(e: any) => setPayHolder(e.target.value)} />
+
       <button style={{ ...s.btnGold, marginTop: 14 }} onClick={onSubmit}>Submit application</button>
     </div>
   );
