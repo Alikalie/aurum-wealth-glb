@@ -53,6 +53,14 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
 function HomeTab({ navTo }: { navTo: NavFn }) {
   const { s, G, profile } = useAurum();
   const [affEnabled, setAffEnabled] = useState(false);
+  const { user } = useAurum();
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("notifications").select("id", { count: "exact", head: true })
+      .eq("user_id", user.id).is("read_at", null)
+      .then(({ count }) => setUnread(count ?? 0));
+  }, [user]);
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "affiliate_enabled").maybeSingle()
       .then(({ data }) => setAffEnabled(data?.value === true || data?.value === "true"));
@@ -66,10 +74,25 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div>
-          <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
-          <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
-          {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            aria-label="Notifications"
+            onClick={() => {
+              const el = document.getElementById("notifications-card");
+              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: G.card, border: `1px solid ${G.border}`, color: G.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            {unread > 0 && (
+              <span style={{ position: "absolute", top: -2, right: -2, background: G.red, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 8, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center" }}>{unread > 9 ? "9+" : unread}</span>
+            )}
+          </button>
+          <div>
+            <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
+            <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
+            {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+          </div>
         </div>
         <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
       </div>
