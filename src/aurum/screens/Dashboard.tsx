@@ -345,6 +345,7 @@ function ProfileTab({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
         <Item label="Dark Mode" right={<Toggle v={themeMode === "dark"} on={() => setThemeMode(themeMode === "dark" ? "light" : "dark")} />} G={G} />
         <Item label="Linked Accounts" right={<span style={{ color: G.muted }}>›</span>} act={() => navTo("payment-methods")} G={G} />
         <Item label="My Products" right={<span style={{ color: G.muted }}>›</span>} act={() => navTo("my-products")} G={G} />
+        <Item label="Wallet Reconciliation" right={<span style={{ color: G.muted }}>›</span>} act={() => navTo("reconciliation")} G={G} />
         <Item label="Currency" right={<span style={{ color: G.muted, fontSize: 13 }}>{cur} ›</span>} act={() => navTo("currency")} G={G} />
         <Item label="Language" right={<span style={{ color: G.muted, fontSize: 13 }}>{currentLang.native} ›</span>} act={() => setLangOpen(!langOpen)} G={G} />
         {langOpen && (

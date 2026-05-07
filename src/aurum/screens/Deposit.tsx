@@ -3,6 +3,7 @@ import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { fmtMoney, convertFromUsd, fxRatesSync } from "../data";
 import { supabase } from "@/integrations/supabase/client";
+import { Smartphone, Building2, CreditCard } from "lucide-react";
 
 type Method = "mobile_money" | "bank" | "paypal";
 
@@ -90,8 +91,9 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
           <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px" }}>Choose how you'll send the {fmtMoney(Number(amount), cur)}.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(["mobile_money", "bank", "paypal"] as Method[]).map(m => (
-              <button key={m} onClick={() => setMethod(m)} style={{ ...s.btnGhost, borderColor: method === m ? G.gold : G.border, color: method === m ? G.gold : G.text }}>
-                {m === "mobile_money" ? "📱 Mobile Money" : m === "bank" ? "🏦 Bank Transfer" : "💳 PayPal"}
+              <button key={m} onClick={() => setMethod(m)} style={{ ...s.btnGhost, borderColor: method === m ? G.gold : G.border, color: method === m ? G.gold : G.text, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {m === "mobile_money" ? <Smartphone size={18} /> : m === "bank" ? <Building2 size={18} /> : <CreditCard size={18} />}
+                {m === "mobile_money" ? "Mobile Money" : m === "bank" ? "Bank Transfer" : "PayPal"}
               </button>
             ))}
           </div>

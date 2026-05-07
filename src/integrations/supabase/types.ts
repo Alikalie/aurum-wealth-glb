@@ -831,6 +831,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_update_affiliate_payment: {
+        Args: { _new_account: string; _user_id: string }
+        Returns: undefined
+      }
+      admin_update_payment_method: {
+        Args: {
+          _account_holder_name: string
+          _account_number: string
+          _paypal_email: string
+          _pm_id: string
+          _provider_name: string
+        }
+        Returns: undefined
+      }
       buy_resale: { Args: { p_user_product_id: string }; Returns: string }
       demote_admin: { Args: { _target: string }; Returns: undefined }
       has_role: {

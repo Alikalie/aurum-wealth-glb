@@ -14,6 +14,7 @@ import { TransactionsHistory } from "@/aurum/screens/TransactionsHistory";
 import { MyProducts } from "@/aurum/screens/MyProducts";
 import { ProductDetails } from "@/aurum/screens/ProductDetails";
 import { Affiliate } from "@/aurum/screens/Affiliate";
+import { Reconciliation } from "@/aurum/screens/Reconciliation";
 import { ServiceGate } from "@/aurum/ServiceGate";
 
 function Shell() {
@@ -81,6 +82,7 @@ function Shell() {
         {screen === "tx-details" && <TransactionDetails nav={nav} txId={txId} />}
         {screen === "transactions-history" && <TransactionsHistory nav={nav} />}
         {screen === "affiliate" && <Affiliate nav={nav} />}
+        {screen === "reconciliation" && <Reconciliation nav={nav} />}
         {screen === "support" && <Support nav={nav} />}
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}
