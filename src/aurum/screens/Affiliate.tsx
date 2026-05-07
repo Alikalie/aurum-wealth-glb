@@ -43,18 +43,14 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
     const { data: ap } = await supabase.from("affiliate_applications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).maybeSingle();
     setApp(ap);
     if (a) {
-      const { data: refs } = await supabase
-        .from("referrals")
-        .select("id, code, created_at, first_deposit_bonus_paid, total_commission, referred_user_id, profiles:profiles!referrals_referred_user_id_fkey(full_name,email)")
-        .eq("referrer_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      // Fallback if FK join not configured: do a simple fetch
-      if (refs) setReferrals(refs);
-      else {
-        const { data: simpleRefs } = await supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false }).limit(20);
-        setReferrals(simpleRefs ?? []);
-      }
+      const { data: simpleRefs } = await supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false }).limit(20);
+      const refList = simpleRefs ?? [];
+      if (refList.length > 0) {
+        const ids = refList.map(r => r.referred_user_id);
+        const { data: profs } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids);
+        const pmap = new Map((profs ?? []).map((p: any) => [p.user_id, p]));
+        setReferrals(refList.map(r => ({ ...r, _profile: pmap.get(r.referred_user_id) })));
+      } else setReferrals([]);
       const { data: tx } = await supabase
         .from("transactions")
         .select("id,amount,note,created_at,kind")
