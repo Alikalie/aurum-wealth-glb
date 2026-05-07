@@ -3,6 +3,7 @@ import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { MOBILE_MONEY, BANKS } from "../data";
 import { supabase } from "@/integrations/supabase/client";
+import { Smartphone, Building2, CreditCard, Lock, AlertTriangle } from "lucide-react";
 
 type Method = "mobile_money" | "bank" | "paypal";
 
@@ -34,17 +35,20 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
 
   return (
     <ScreenShell title="Linked Accounts" onBack={() => nav("dashboard")}>
-      <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px", lineHeight: 1.5 }}>
-        You can save <strong>only one</strong> payment method. After saving it is locked for <strong>90 days</strong>. To change it, contact support.
-        {isLocked && (
-          <>
-            <br/>
-            <strong style={{ color: G.gold }}>
-              🔒 Unlocks in {days}d {String(hours).padStart(2,"0")}:{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
-            </strong>
-          </>
-        )}
-      </p>
+      <div style={{ background: "#fff3cd22", border: `1px solid ${G.gold}`, borderRadius: 10, padding: 14, marginBottom: 14, display: "flex", gap: 10 }}>
+        <AlertTriangle size={20} color={G.gold} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ fontSize: 12, color: G.text, lineHeight: 1.55 }}>
+          <strong style={{ color: G.gold }}>IMPORTANT — READ BEFORE SAVING</strong>
+          <div style={{ marginTop: 6 }}>
+            You can save <strong>only ONE</strong> payment method, and it will be <strong>locked for 365 days</strong>. All future withdrawals will be sent to this exact account. <strong>Double-check every digit</strong> — wrong details = lost funds. To change it before 365 days, you must contact admin.
+          </div>
+          {isLocked && (
+            <div style={{ marginTop: 8, color: G.gold, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              <Lock size={14} /> Unlocks in {days}d {String(hours).padStart(2,"0")}:{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}
+            </div>
+          )}
+        </div>
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
         {list.length === 0 && <div style={{ ...s.card, fontSize: 13, color: G.muted, textAlign: "center" }}>No payment methods added yet.</div>}
@@ -66,9 +70,9 @@ export function PaymentMethods({ nav }: { nav: (s: string) => void }) {
         <>
           <div style={{ fontSize: 12, color: G.muted, marginBottom: 8, letterSpacing: 0.5 }}>ADD A METHOD</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <button style={s.btnGhost} onClick={() => setAdding("mobile_money")}>📱 Mobile Money</button>
-            <button style={s.btnGhost} onClick={() => setAdding("bank")}>🏦 Bank Account</button>
-            <button style={s.btnGhost} onClick={() => setAdding("paypal")}>💳 PayPal</button>
+            <button style={{ ...s.btnGhost, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setAdding("mobile_money")}><Smartphone size={18}/> Mobile Money</button>
+            <button style={{ ...s.btnGhost, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setAdding("bank")}><Building2 size={18}/> Bank Account</button>
+            <button style={{ ...s.btnGhost, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => setAdding("paypal")}><CreditCard size={18}/> PayPal</button>
           </div>
         </>
       )) : (
