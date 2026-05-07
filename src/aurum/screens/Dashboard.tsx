@@ -104,7 +104,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
-      <NotificationsCard navTo={navTo} />
+      <div id="notifications-card"><NotificationsCard navTo={navTo} /></div>
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       {affEnabled && (
         <button
