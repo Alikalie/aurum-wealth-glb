@@ -11,6 +11,9 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showWd, setShowWd] = useState(false);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<any[]>([]);
+  const [wdHistory, setWdHistory] = useState<any[]>([]);
 
   // Form state
   const [fullName, setFullName] = useState(profile?.full_name || "");
@@ -39,6 +42,32 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
     setAff(a);
     const { data: ap } = await supabase.from("affiliate_applications").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).maybeSingle();
     setApp(ap);
+    if (a) {
+      const { data: simpleRefs } = await supabase.from("referrals").select("*").eq("referrer_id", user.id).order("created_at", { ascending: false }).limit(20);
+      const refList = simpleRefs ?? [];
+      if (refList.length > 0) {
+        const ids = refList.map(r => r.referred_user_id);
+        const { data: profs } = await supabase.from("profiles").select("user_id, full_name, email").in("user_id", ids);
+        const pmap = new Map((profs ?? []).map((p: any) => [p.user_id, p]));
+        setReferrals(refList.map(r => ({ ...r, _profile: pmap.get(r.referred_user_id) })));
+      } else setReferrals([]);
+      const { data: tx } = await supabase
+        .from("transactions")
+        .select("id,amount,note,created_at,kind")
+        .eq("user_id", user.id)
+        .eq("kind", "admin_credit")
+        .ilike("note", "%Affiliate%")
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setCommissions(tx ?? []);
+      const { data: wds } = await supabase
+        .from("affiliate_withdrawals")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      setWdHistory(wds ?? []);
+    }
     setLoading(false);
   };
   useEffect(() => { load(); }, [user]);
@@ -120,6 +149,62 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
               <button style={s.btnGhost} onClick={() => setShowWd(false)}>Cancel</button>
               <button style={s.btnGold} onClick={requestWithdraw}>Submit request</button>
             </div>
+          </div>
+        )}
+
+        {/* Referrals list */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Your referrals ({referrals.length})</div>
+        {referrals.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No referrals yet — share your code to earn commission.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {referrals.map((r: any) => (
+              <div key={r.id} style={{ ...s.card, padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r._profile?.full_name || r._profile?.email || "User"}</div>
+                  <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{new Date(r.created_at).toLocaleDateString()}</div>
+                </div>
+                <div style={{ textAlign: "right", marginLeft: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: r.first_deposit_bonus_paid ? G.green : G.muted }}>
+                    {r.first_deposit_bonus_paid ? "Paid" : "Pending"}
+                  </div>
+                  <div style={{ fontSize: 11, color: G.gold, marginTop: 2 }}>${Number(r.total_commission || 0).toFixed(2)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Commission history */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 22, marginBottom: 8 }}>Commission history</div>
+        {commissions.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No commissions yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {commissions.map((c: any) => (
+              <div key={c.id} style={{ ...s.card, padding: 10, display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 12, color: G.muted, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.note || "Commission"}<div style={{ fontSize: 10, marginTop: 2 }}>{new Date(c.created_at).toLocaleDateString()}</div></div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: G.green }}>+${Number(c.amount).toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Withdrawal history */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 22, marginBottom: 8 }}>Withdrawal requests</div>
+        {wdHistory.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No withdrawal requests yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+            {wdHistory.map((w: any) => (
+              <div key={w.id} style={{ ...s.card, padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>${Number(w.amount).toFixed(2)}</div>
+                  <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{new Date(w.created_at).toLocaleDateString()}</div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: w.status === "approved" ? G.green : w.status === "rejected" ? G.red : G.gold, textTransform: "uppercase" }}>{w.status}</div>
+              </div>
+            ))}
           </div>
         )}
       </ScreenShell>
