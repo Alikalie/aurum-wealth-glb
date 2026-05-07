@@ -151,6 +151,62 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
             </div>
           </div>
         )}
+
+        {/* Referrals list */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 24, marginBottom: 8 }}>Your referrals ({referrals.length})</div>
+        {referrals.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No referrals yet — share your code to earn commission.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {referrals.map((r: any) => (
+              <div key={r.id} style={{ ...s.card, padding: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r._profile?.full_name || r._profile?.email || "User"}</div>
+                  <div style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{new Date(r.created_at).toLocaleDateString()}</div>
+                </div>
+                <div style={{ textAlign: "right", marginLeft: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: r.first_deposit_bonus_paid ? G.green : G.muted }}>
+                    {r.first_deposit_bonus_paid ? "Paid" : "Pending"}
+                  </div>
+                  <div style={{ fontSize: 11, color: G.gold, marginTop: 2 }}>${Number(r.total_commission || 0).toFixed(2)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Commission history */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 22, marginBottom: 8 }}>Commission history</div>
+        {commissions.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No commissions yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {commissions.map((c: any) => (
+              <div key={c.id} style={{ ...s.card, padding: 10, display: "flex", justifyContent: "space-between" }}>
+                <div style={{ fontSize: 12, color: G.muted, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.note || "Commission"}<div style={{ fontSize: 10, marginTop: 2 }}>{new Date(c.created_at).toLocaleDateString()}</div></div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: G.green }}>+${Number(c.amount).toFixed(2)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Withdrawal history */}
+        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 22, marginBottom: 8 }}>Withdrawal requests</div>
+        {wdHistory.length === 0 ? (
+          <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No withdrawal requests yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+            {wdHistory.map((w: any) => (
+              <div key={w.id} style={{ ...s.card, padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>${Number(w.amount).toFixed(2)}</div>
+                  <div style={{ fontSize: 10, color: G.muted, marginTop: 2 }}>{new Date(w.created_at).toLocaleDateString()}</div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: w.status === "approved" ? G.green : w.status === "rejected" ? G.red : G.gold, textTransform: "uppercase" }}>{w.status}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </ScreenShell>
     );
   }
