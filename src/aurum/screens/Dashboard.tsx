@@ -51,9 +51,8 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
 }
 
 function HomeTab({ navTo }: { navTo: NavFn }) {
-  const { s, G, profile } = useAurum();
+  const { s, G, profile, user } = useAurum();
   const [affEnabled, setAffEnabled] = useState(false);
-  const { user } = useAurum();
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     if (!user) return;
