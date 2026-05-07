@@ -117,6 +117,10 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
   const { s, G, toast } = useAurum();
   const [pms, setPms] = useState<any[]>([]);
   const [txs, setTxs] = useState<any[]>([]);
+  const [aff, setAff] = useState<any>(null);
+  const [affAcct, setAffAcct] = useState("");
+  const [editingPm, setEditingPm] = useState<string | null>(null);
+  const [pmEdit, setPmEdit] = useState<any>({});
   const [bucket, setBucket] = useState<"invested" | "earned" | "withdrawn">("earned");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -125,7 +129,33 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
   useEffect(() => {
     supabase.from("payment_methods").select("*").eq("user_id", u.user_id).then(({ data }) => setPms(data ?? []));
     supabase.from("transactions").select("*").eq("user_id", u.user_id).order("created_at", { ascending: false }).limit(50).then(({ data }) => setTxs(data ?? []));
+    supabase.from("affiliates").select("*").eq("user_id", u.user_id).maybeSingle().then(({ data }) => { setAff(data); setAffAcct(data?.payment_account ?? ""); });
   }, [u.user_id]);
+
+  const reloadPms = () => supabase.from("payment_methods").select("*").eq("user_id", u.user_id).then(({ data }) => setPms(data ?? []));
+
+  const startEditPm = (p: any) => {
+    setEditingPm(p.id);
+    setPmEdit({ provider_name: p.provider_name || "", account_holder_name: p.account_holder_name || "", account_number: p.account_number || "", paypal_email: p.paypal_email || "" });
+  };
+  const savePm = async () => {
+    if (!editingPm) return;
+    const { error } = await supabase.rpc("admin_update_payment_method", {
+      _pm_id: editingPm,
+      _provider_name: pmEdit.provider_name || null,
+      _account_holder_name: pmEdit.account_holder_name || null,
+      _account_number: pmEdit.account_number || null,
+      _paypal_email: pmEdit.paypal_email || null,
+    } as any);
+    if (error) { toast(error.message); return; }
+    toast("Payment method updated");
+    setEditingPm(null); reloadPms();
+  };
+  const saveAffAcct = async () => {
+    const { error } = await supabase.rpc("admin_update_affiliate_payment", { _user_id: u.user_id, _new_account: affAcct } as any);
+    if (error) { toast(error.message); return; }
+    toast("Affiliate payment account updated");
+  };
 
   const fund = async () => {
     const a = Number(amount);
@@ -183,11 +213,44 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
           </div>
           {pms.map(p => (
             <div key={p.id} style={{ fontSize: 12, padding: "8px 0", borderBottom: `1px solid ${G.border}` }}>
-              <strong>{p.method_type.replace("_", " ")}</strong> · {p.provider_name || "PayPal"} · {p.account_holder_name} · {p.account_number || p.paypal_email}
+              {editingPm === p.id ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <strong>{p.method_type.replace("_", " ")}</strong>
+                  {p.method_type !== "paypal" && (
+                    <input style={s.input} placeholder="Provider" value={pmEdit.provider_name} onChange={e => setPmEdit({ ...pmEdit, provider_name: e.target.value })} />
+                  )}
+                  <input style={s.input} placeholder="Holder name" value={pmEdit.account_holder_name} onChange={e => setPmEdit({ ...pmEdit, account_holder_name: e.target.value })} />
+                  {p.method_type === "paypal" ? (
+                    <input style={s.input} placeholder="PayPal email" value={pmEdit.paypal_email} onChange={e => setPmEdit({ ...pmEdit, paypal_email: e.target.value })} />
+                  ) : (
+                    <input style={s.input} placeholder="Account number" value={pmEdit.account_number} onChange={e => setPmEdit({ ...pmEdit, account_number: e.target.value })} />
+                  )}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => setEditingPm(null)} style={{ flex: 1, background: "transparent", border: `1px solid ${G.border}`, color: G.text, borderRadius: 6, padding: "6px", fontSize: 11, cursor: "pointer" }}>Cancel</button>
+                    <button onClick={savePm} style={{ flex: 1, background: G.gold, color: "#1a1208", border: "none", borderRadius: 6, padding: "6px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Save</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <strong>{p.method_type.replace("_", " ")}</strong> · {p.provider_name || "PayPal"} · {p.account_holder_name} · {p.account_number || p.paypal_email}
+                  </div>
+                  <button onClick={() => startEditPm(p)} style={{ background: "transparent", border: `1px solid ${G.gold}`, color: G.gold, borderRadius: 6, padding: "3px 8px", fontSize: 10, cursor: "pointer" }}>Edit</button>
+                </div>
+              )}
             </div>
           ))}
           {pms.length === 0 && <div style={{ color: G.muted, fontSize: 12 }}>No methods</div>}
         </div>
+
+        {aff && (
+          <div style={{ ...s.card, marginBottom: 14 }}>
+            <div style={{ ...s.serif, fontSize: 16, marginBottom: 8 }}>Affiliate payment account</div>
+            <div style={{ fontSize: 11, color: G.muted, marginBottom: 6 }}>Code: <strong style={{ color: G.gold }}>{aff.code}</strong> · Balance: ${Number(aff.available_balance || 0).toFixed(2)}</div>
+            <textarea style={{ ...s.input, minHeight: 60, fontFamily: "inherit" }} value={affAcct} onChange={e => setAffAcct(e.target.value)} />
+            <button onClick={saveAffAcct} style={{ ...s.btnGold, marginTop: 8 }}>Save affiliate account</button>
+          </div>
+        )}
 
         <div style={{ ...s.card }}>
           <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>Recent transactions</div>
