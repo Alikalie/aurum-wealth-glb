@@ -100,6 +100,13 @@ function AddMethodForm({ type, onDone, onCancel }: { type: Method; onDone: () =>
     if (!holder.trim()) { toast("Enter the account holder name"); return; }
     if (type === "paypal" && !paypalEmail.includes("@")) { toast("Enter a valid PayPal email"); return; }
     if (type !== "paypal" && !account.trim()) { toast("Enter the account number"); return; }
+    const summary = type === "paypal"
+      ? `PayPal email: ${paypalEmail.trim()}\nName: ${holder.trim()}`
+      : `${finalProvider}\nAccount: ${account.trim()}\nName: ${holder.trim()}`;
+    const ok = window.confirm(
+      `⚠️ FINAL WARNING\n\nThis account will be LOCKED for 365 days. All withdrawals go here.\n\n${summary}\n\nIs every detail correct?`
+    );
+    if (!ok) return;
     setLoad(true);
     const { error } = await supabase.from("payment_methods").insert({
       user_id: user.id,
@@ -157,7 +164,10 @@ function AddMethodForm({ type, onDone, onCancel }: { type: Method; onDone: () =>
         <button style={s.btnGhost} onClick={onCancel}>Cancel</button>
         <button style={s.btnGold} onClick={submit} disabled={load}>{load ? "Saving…" : "Save"}</button>
       </div>
-      <p style={{ fontSize: 11, color: G.muted, marginTop: 10, lineHeight: 1.5 }}>Once saved, you cannot edit this entry. Contact support if changes are needed.</p>
+      <div style={{ fontSize: 11, color: G.red, marginTop: 10, lineHeight: 1.5, display: "flex", gap: 6 }}>
+        <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+        <span>Once saved, you <strong>cannot edit</strong> this for 365 days. Wrong details mean lost funds — verify before saving.</span>
+      </div>
     </div>
   );
 }
