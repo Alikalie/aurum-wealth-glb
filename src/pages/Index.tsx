@@ -1,16 +1,15 @@
-// Update this page (the content is just a fallback if you fail to update the page)
-
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-slate-950 px-6 text-white">
+      <div className="max-w-3xl text-center">
+        <p className="text-sm uppercase tracking-[0.3em] text-amber-300">Aurum Wealth</p>
+        <h1 className="mt-4 text-4xl font-semibold sm:text-6xl">Global Investment Platform</h1>
+        <p className="mt-6 text-base leading-8 text-slate-300">
+          Aurum Wealth is a professional online investment platform designed for global users. Explore portfolio management, deposits, withdrawals, and real-time analytics.
+        </p>
+      </div>
+    </main>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
