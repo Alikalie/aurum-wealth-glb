@@ -13,6 +13,9 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showWd, setShowWd] = useState(false);
+  const [confirmWd, setConfirmWd] = useState(false);
+  const [pmList, setPmList] = useState<any[]>([]);
+  const [wdPmId, setWdPmId] = useState<string>("");
   const [referrals, setReferrals] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [wdHistory, setWdHistory] = useState<any[]>([]);
@@ -72,6 +75,8 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
         .order("created_at", { ascending: false })
         .limit(20);
       setWdHistory(wds ?? []);
+      const { data: pms } = await supabase.from("payment_methods").select("*").eq("user_id", user.id);
+      setPmList(pms ?? []);
     }
     setLoading(false);
   };
@@ -105,19 +110,22 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
   const requestWithdraw = async () => {
     const amt = Number(wdAmount);
     if (!amt || amt < 30) { toast("Minimum withdrawal is $30"); return; }
-    if (!aff?.payment_account) { toast("No payment account on file — contact admin"); return; }
+    const account = wdPmId
+      ? (() => { const p = pmList.find(x => x.id === wdPmId); return p ? `${p.method_type} — ${p.provider_name || ""} | ${p.account_number || p.paypal_email} | ${p.account_holder_name}` : aff?.payment_account; })()
+      : aff?.payment_account;
+    if (!account) { toast("No payment account on file — contact admin"); return; }
     const { error } = await supabase.from("affiliate_withdrawals").insert({
-      user_id: user.id, amount: amt, payment_account: aff.payment_account, status: "pending",
+      user_id: user.id, amount: amt, payment_account: account, status: "pending",
     });
     if (error) { toast(error.message); return; }
     toast("Withdrawal requested");
-    setShowWd(false); setWdAmount(""); load();
+    setShowWd(false); setConfirmWd(false); setWdAmount(""); setWdPmId(""); load();
   };
 
   if (loading) return <ScreenShell title="Affiliate" onBack={() => nav("dashboard")}><div style={{ color: G.muted, fontSize: 13 }}>Loading…</div></ScreenShell>;
 
-  // CASE A: approved affiliate — show dashboard
-  if (aff && app?.status === "approved") {
+  // CASE A: approved affiliate — show dashboard (treat presence of an `aff` row as approved)
+  if (aff) {
     const balance = Number(aff.available_balance || 0);
     const link = `${window.location.origin}/?ref=${aff.code}`;
     return (
@@ -154,13 +162,40 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
           <button style={{ ...s.btnGold, marginTop: 18 }} onClick={() => setShowWd(true)} disabled={balance < 30}>
             {balance < 30 ? `Need $${(30 - balance).toFixed(2)} more to withdraw` : "Withdraw commission"}
           </button>
-        ) : (
+        ) : !confirmWd ? (
           <div style={{ ...s.card, marginTop: 16 }}>
+            <div style={{ ...s.serif, fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Withdraw commission</div>
             <label style={s.label}>AMOUNT (USD)</label>
             <input style={s.input} type="number" min={30} max={balance} value={wdAmount} onChange={e => setWdAmount(e.target.value)} placeholder="30.00" />
+            <label style={{ ...s.label, marginTop: 12 }}>SEND TO</label>
+            <select style={{ ...s.input, appearance: "none" }} value={wdPmId} onChange={e => setWdPmId(e.target.value)}>
+              <option value="">Locked affiliate account ({aff.payment_account?.slice(0, 32)}…)</option>
+              {pmList.map(p => (
+                <option key={p.id} value={p.id}>{p.method_type} — {p.provider_name || ""} {p.account_number || p.paypal_email}</option>
+              ))}
+            </select>
+            <p style={{ fontSize: 10, color: G.muted, margin: "6px 2px 0" }}>Default uses your locked affiliate account. Pick a saved wallet to override.</p>
             <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <button style={s.btnGhost} onClick={() => setShowWd(false)}>Cancel</button>
-              <button style={s.btnGold} onClick={requestWithdraw}>Submit request</button>
+              <button style={s.btnGhost} onClick={() => { setShowWd(false); setWdAmount(""); }}>Cancel</button>
+              <button style={s.btnGold} onClick={() => {
+                const amt = Number(wdAmount);
+                if (!amt || amt < 30) { toast("Minimum withdrawal is $30"); return; }
+                if (amt > balance) { toast("Amount exceeds available balance"); return; }
+                setConfirmWd(true);
+              }}>Review</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ ...s.card, marginTop: 16 }}>
+            <div style={{ ...s.serif, fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Confirm withdrawal</div>
+            <div style={{ background: G.bg, borderRadius: 10, padding: 12, fontSize: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}><span style={{ color: G.muted }}>Amount</span><strong>${Number(wdAmount).toFixed(2)}</strong></div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", gap: 12 }}><span style={{ color: G.muted, flexShrink: 0 }}>To</span><span style={{ textAlign: "right", wordBreak: "break-word" }}>{wdPmId ? (() => { const p = pmList.find(x => x.id === wdPmId); return p ? `${p.method_type} · ${p.account_number || p.paypal_email}` : ""; })() : aff.payment_account}</span></div>
+            </div>
+            <p style={{ fontSize: 11, color: G.muted, margin: "10px 2px" }}>Once submitted, an admin will review and approve. Make sure the destination is correct.</p>
+            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <button style={s.btnGhost} onClick={() => setConfirmWd(false)}>Back</button>
+              <button style={s.btnGold} onClick={requestWithdraw}>Confirm & submit</button>
             </div>
           </div>
         )}
