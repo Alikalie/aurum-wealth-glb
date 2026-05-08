@@ -32,25 +32,38 @@ function useCountdown(target: string | null) {
 function NewsCard({ post }: { post: Post }) {
   const { G, s } = useAurum();
   const cd = useCountdown(post.deadline_at);
+  const [open, setOpen] = useState(false);
+  const SHORT = 120;
+  const isLong = (post.body || "").length > SHORT;
+  const preview = isLong ? post.body.slice(0, SHORT).trimEnd() + "…" : post.body;
   return (
     <div style={{ ...s.card, padding: 0, overflow: "hidden", marginBottom: 12 }}>
       {post.image_url && (
-        <img src={post.image_url} alt={post.title} style={{ width: "100%", height: 140, objectFit: "cover", display: "block" }} />
+        <img src={post.image_url} alt={post.title} style={{ width: "100%", height: open ? 180 : 100, objectFit: "cover", display: "block", transition: "height 0.2s" }} />
       )}
-      <div style={{ padding: 14 }}>
+      <div style={{ padding: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-          <div style={{ ...s.serif, fontSize: 17, fontWeight: 600, lineHeight: 1.25 }}>{post.title}</div>
+          <div style={{ ...s.serif, fontSize: 14, fontWeight: 600, lineHeight: 1.25 }}>{post.title}</div>
           {cd && (
             <span style={{
-              fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, whiteSpace: "nowrap",
+              fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 8, whiteSpace: "nowrap",
               background: cd.expired ? G.red + "22" : G.gold + "22",
               color: cd.expired ? G.red : G.gold,
               border: `1px solid ${cd.expired ? G.red + "55" : G.gold + "55"}`
             }}>{cd.expired ? "EXPIRED" : `⏱ ${cd.text}`}</span>
           )}
         </div>
-        {post.body && <p style={{ fontSize: 13, color: G.muted, lineHeight: 1.55, margin: "8px 0 0", whiteSpace: "pre-wrap" }}>{post.body}</p>}
-        <div style={{ fontSize: 10, color: G.inactive, marginTop: 10 }}>{new Date(post.created_at).toLocaleDateString()}</div>
+        {post.body && (
+          <p style={{ fontSize: 12, color: G.muted, lineHeight: 1.5, margin: "6px 0 0", whiteSpace: "pre-wrap" }}>{open ? post.body : preview}</p>
+        )}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+          <div style={{ fontSize: 10, color: G.inactive }}>{new Date(post.created_at).toLocaleDateString()}</div>
+          {isLong && (
+            <button onClick={() => setOpen(o => !o)} style={{ background: "none", border: "none", color: G.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>
+              {open ? "Show less" : "Read more"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
