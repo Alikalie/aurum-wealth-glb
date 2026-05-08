@@ -4,7 +4,6 @@ import { COUNTRIES } from "../data";
 import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
-import { NewsFeed } from "./NewsFeed";
 const FEATURES = [
   { icon: "◆", t: "Zero commission trades", d: "Trade stocks and ETFs with no fees, ever. Keep more of what you earn." },
   { icon: "✦", t: "AI-powered insights", d: "Personalized recommendations driven by real-time market analysis." },
