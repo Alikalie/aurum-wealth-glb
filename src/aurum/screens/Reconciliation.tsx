@@ -3,12 +3,14 @@ import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { fmtMoney } from "../data";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 
 export function Reconciliation({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile } = useAurum();
   const cur = profile?.currency ?? "USD";
   const [data, setData] = useState<any>(null);
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const toggle = (k: string) => setOpen(o => ({ ...o, [k]: !o[k] }));
 
   useEffect(() => {
     if (!user) return;
@@ -37,6 +39,13 @@ export function Reconciliation({ nav }: { nav: (s: string) => void }) {
         sumDeposits, sumWithdrawals, sumPurchases, sumEarnings,
         expectedInvested, expectedWithdrawn, expectedEarned,
         profileInvested, profileEarned, profileWithdrawn,
+        deps: (deps ?? []).filter(d => d.status === "approved"),
+        wds: (wds ?? []).filter(w => w.status === "approved"),
+        ups: ups ?? [],
+        earnings: (txs ?? []).filter((t: any) =>
+          ["daily_earning", "product_sale", "cycle_complete"].includes(t.kind) ||
+          (t.kind === "admin_credit" && (t.bucket === "earned" || t.bucket == null))
+        ),
       });
     })();
   }, [user, profile]);
@@ -63,10 +72,29 @@ export function Reconciliation({ nav }: { nav: (s: string) => void }) {
 
   const main = data.profileInvested + data.profileEarned - data.profileWithdrawn;
 
+  const Drill = ({ k, label, total, items, render }: { k: string; label: string; total: number; items: any[]; render: (it: any) => React.ReactNode }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${G.border}`, fontSize: 12, flexDirection: "column" }}>
+      <button onClick={() => toggle(k)} style={{ background: "none", border: "none", padding: 0, color: G.text, fontFamily: "inherit", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer", width: "100%" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          {open[k] ? <ChevronDown size={14} color={G.muted} /> : <ChevronRight size={14} color={G.muted} />}
+          <span style={{ color: G.muted }}>{label}</span>
+        </span>
+        <span style={{ fontWeight: 600 }}>{fmtMoney(total, cur)}</span>
+      </button>
+      {open[k] && (
+        <div style={{ marginTop: 8, marginLeft: 18, borderLeft: `1px solid ${G.border}`, paddingLeft: 10 }}>
+          {items.length === 0 ? (
+            <div style={{ fontSize: 11, color: G.muted, padding: "4px 0" }}>No entries</div>
+          ) : items.map((it, i) => <div key={it.id || i} style={{ padding: "4px 0", borderBottom: i === items.length - 1 ? "none" : `1px solid ${G.border}` }}>{render(it)}</div>)}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <ScreenShell title="Wallet Reconciliation" onBack={() => nav("dashboard")}>
       <p style={{ color: G.muted, fontSize: 12, lineHeight: 1.55, margin: "0 0 14px" }}>
-        Verifies that your profile totals match the sum of all approved deposits, withdrawals, purchases and earnings.
+        Verifies that your profile totals match the sum of all approved deposits, withdrawals, purchases and earnings. Tap any total to expand.
       </p>
 
       <div style={{ ...s.card, padding: 16, marginBottom: 12, textAlign: "center" }}>
@@ -76,17 +104,18 @@ export function Reconciliation({ nav }: { nav: (s: string) => void }) {
 
       <div style={{ ...s.card, padding: 14, marginBottom: 14 }}>
         <div style={{ ...s.serif, fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Lifetime totals</div>
-        {[
-          ["Approved deposits", data.sumDeposits],
-          ["Product purchases", data.sumPurchases],
-          ["Earnings (daily + sales + bonuses)", data.sumEarnings],
-          ["Approved withdrawals", data.sumWithdrawals],
-        ].map(([l, v]: any) => (
-          <div key={l} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${G.border}`, fontSize: 12 }}>
-            <span style={{ color: G.muted }}>{l}</span>
-            <span style={{ fontWeight: 600 }}>{fmtMoney(v, cur)}</span>
-          </div>
-        ))}
+        <Drill k="deps" label="Approved deposits" total={data.sumDeposits} items={data.deps} render={(d: any) => (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: G.muted }}>{new Date(d.created_at || Date.now()).toLocaleDateString()} · {d.method_type}</span><span style={{ color: G.green, fontWeight: 600 }}>+{fmtMoney(Number(d.amount), cur)}</span></div>
+        )} />
+        <Drill k="ups" label="Product purchases" total={data.sumPurchases} items={data.ups} render={(p: any) => (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: G.muted }}>{new Date(p.purchased_at || p.cycle_start_at).toLocaleDateString()}</span><span style={{ color: G.red, fontWeight: 600 }}>-{fmtMoney(Number(p.purchase_price), cur)}</span></div>
+        )} />
+        <Drill k="earn" label="Earnings (daily + sales + bonuses)" total={data.sumEarnings} items={data.earnings} render={(t: any) => (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, gap: 6 }}><span style={{ color: G.muted, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{new Date(t.created_at).toLocaleDateString()} · {t.note || t.kind}</span><span style={{ color: G.green, fontWeight: 600 }}>+{fmtMoney(Number(t.amount), t.currency || cur)}</span></div>
+        )} />
+        <Drill k="wds" label="Approved withdrawals" total={data.sumWithdrawals} items={data.wds} render={(w: any) => (
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}><span style={{ color: G.muted }}>{new Date(w.created_at || Date.now()).toLocaleDateString()}</span><span style={{ color: G.red, fontWeight: 600 }}>-{fmtMoney(Number(w.amount), cur)}</span></div>
+        )} />
       </div>
 
       <Row label="Invested (deposits − purchases)" expected={data.expectedInvested} actual={data.profileInvested} />

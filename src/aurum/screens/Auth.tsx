@@ -4,9 +4,6 @@ import { COUNTRIES } from "../data";
 import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
-import { NewsFeed } from "./NewsFeed";
-import { ContactButtons } from "../SupportContacts";
-
 const FEATURES = [
   { icon: "◆", t: "Zero commission trades", d: "Trade stocks and ETFs with no fees, ever. Keep more of what you earn." },
   { icon: "✦", t: "AI-powered insights", d: "Personalized recommendations driven by real-time market analysis." },
@@ -47,15 +44,6 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
           <div style={{ ...s.serif, fontSize: 16, fontWeight: 700, color: G.gold, marginBottom: 4 }}>📱 Mobile app coming soon</div>
           <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.5 }}>Download the Aurum app for iOS & Android — launching soon. Use the web app in the meantime.</div>
         </div>
-      </div>
-
-      <div style={{ padding: "20px 22px 0" }}>
-        <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600, marginBottom: 10 }}>NEED HELP?</div>
-        <ContactButtons />
-      </div>
-
-      <div id="aurum-news" style={{ padding: "32px 22px 0" }}>
-        <NewsFeed />
       </div>
 
       <div id="aurum-why" style={{ padding: "40px 22px 60px" }}>

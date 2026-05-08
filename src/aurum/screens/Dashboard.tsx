@@ -73,27 +73,24 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+        <div>
+          <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
+          <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
+          {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
             aria-label="Notifications"
-            onClick={() => {
-              const el = document.getElementById("notifications-card");
-              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }}
-            style={{ position: "relative", width: 38, height: 38, borderRadius: 19, background: G.card, border: `1px solid ${G.border}`, color: G.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+            onClick={() => navTo("notifications")}
+            style={{ position: "relative", width: 40, height: 40, borderRadius: 20, background: G.card, border: `1px solid ${G.border}`, color: G.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
             {unread > 0 && (
               <span style={{ position: "absolute", top: -2, right: -2, background: G.red, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 8, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center" }}>{unread > 9 ? "9+" : unread}</span>
             )}
           </button>
-          <div>
-            <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
-            <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
-            {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
-          </div>
+          <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
         </div>
-        <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
       </div>
       <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>WALLET BALANCE</div>
@@ -104,7 +101,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
-      <div id="notifications-card"><NotificationsCard navTo={navTo} /></div>
+      <WithdrawalStatusCard navTo={navTo} />
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       {affEnabled && (
         <button
@@ -203,6 +200,58 @@ function DetailRow({ label, value, G, bold, last, muted, valueColor }: { label: 
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: last ? "none" : `1px solid ${G.border}` }}>
       <span style={{ fontSize: 13, color: muted ? G.muted : G.text }}>{label}</span>
       <span style={{ fontSize: bold ? 16 : 14, fontWeight: bold ? 700 : 600, color: valueColor || (bold ? G.text : G.text) }}>{value}</span>
+    </div>
+  );
+}
+
+function WithdrawalStatusCard({ navTo }: { navTo: NavFn }) {
+  const { s, G, user, profile } = useAurum();
+  const [items, setItems] = useState<any[]>([]);
+  const cur = profile?.currency ?? "USD";
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("withdrawals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5)
+      .then(({ data }) => setItems(data ?? []));
+  }, [user]);
+  if (!user || items.length === 0) return null;
+  const colorFor = (st: string) => st === "approved" ? G.green : st === "rejected" ? G.red : G.gold;
+  return (
+    <div style={{ ...s.card, padding: 14, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>WITHDRAWAL REQUESTS</div>
+        <button onClick={() => navTo("transactions-history")} style={{ background: "none", border: "none", color: G.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>See all</button>
+      </div>
+      {items.map(w => (
+        <div key={w.id} style={{ borderTop: `1px solid ${G.border}`, paddingTop: 10, marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{fmtMoney(Number(w.amount), w.currency || cur)}</div>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: colorFor(w.status) + "22", color: colorFor(w.status), border: `1px solid ${colorFor(w.status)}55`, textTransform: "uppercase" }}>{w.status}</span>
+          </div>
+          {/* Timeline */}
+          <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+            {["pending", "approved", "rejected"].filter(st => st !== "rejected" || w.status === "rejected").map((st, idx, arr) => {
+              const reached = (st === "pending") || (st === "approved" && w.status === "approved") || (st === "rejected" && w.status === "rejected");
+              const c = reached ? colorFor(w.status === "rejected" ? "rejected" : (st === "pending" && w.status !== "pending" ? "approved" : st)) : G.inactive;
+              return (
+                <div key={st} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 4, background: reached ? c : G.border, flexShrink: 0 }} />
+                  <div style={{ fontSize: 9, color: reached ? c : G.muted, textTransform: "uppercase", fontWeight: 600 }}>{st}</div>
+                  {idx < arr.length - 1 && <div style={{ flex: 1, height: 1, background: G.border }} />}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: G.muted, marginTop: 6 }}>
+            Requested {new Date(w.created_at).toLocaleDateString()}
+            {w.reviewed_at && ` · Reviewed ${new Date(w.reviewed_at).toLocaleDateString()}`}
+          </div>
+          {w.admin_note && (
+            <div style={{ fontSize: 11, color: G.muted, marginTop: 6, fontStyle: "italic", background: G.bg, padding: 8, borderRadius: 8, border: `1px solid ${G.border}` }}>
+              <strong style={{ color: colorFor(w.status) }}>Admin note:</strong> {w.admin_note}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
