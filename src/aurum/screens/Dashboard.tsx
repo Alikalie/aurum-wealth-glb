@@ -204,6 +204,58 @@ function DetailRow({ label, value, G, bold, last, muted, valueColor }: { label: 
   );
 }
 
+function WithdrawalStatusCard({ navTo }: { navTo: NavFn }) {
+  const { s, G, user, profile } = useAurum();
+  const [items, setItems] = useState<any[]>([]);
+  const cur = profile?.currency ?? "USD";
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("withdrawals").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(5)
+      .then(({ data }) => setItems(data ?? []));
+  }, [user]);
+  if (!user || items.length === 0) return null;
+  const colorFor = (st: string) => st === "approved" ? G.green : st === "rejected" ? G.red : G.gold;
+  return (
+    <div style={{ ...s.card, padding: 14, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+        <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>WITHDRAWAL REQUESTS</div>
+        <button onClick={() => navTo("transactions-history")} style={{ background: "none", border: "none", color: G.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: 0 }}>See all</button>
+      </div>
+      {items.map(w => (
+        <div key={w.id} style={{ borderTop: `1px solid ${G.border}`, paddingTop: 10, marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{fmtMoney(Number(w.amount), w.currency || cur)}</div>
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 8, background: colorFor(w.status) + "22", color: colorFor(w.status), border: `1px solid ${colorFor(w.status)}55`, textTransform: "uppercase" }}>{w.status}</span>
+          </div>
+          {/* Timeline */}
+          <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+            {["pending", "approved", "rejected"].filter(st => st !== "rejected" || w.status === "rejected").map((st, idx, arr) => {
+              const reached = (st === "pending") || (st === "approved" && w.status === "approved") || (st === "rejected" && w.status === "rejected");
+              const c = reached ? colorFor(w.status === "rejected" ? "rejected" : (st === "pending" && w.status !== "pending" ? "approved" : st)) : G.inactive;
+              return (
+                <div key={st} style={{ flex: 1, display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 4, background: reached ? c : G.border, flexShrink: 0 }} />
+                  <div style={{ fontSize: 9, color: reached ? c : G.muted, textTransform: "uppercase", fontWeight: 600 }}>{st}</div>
+                  {idx < arr.length - 1 && <div style={{ flex: 1, height: 1, background: G.border }} />}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize: 10, color: G.muted, marginTop: 6 }}>
+            Requested {new Date(w.created_at).toLocaleDateString()}
+            {w.reviewed_at && ` · Reviewed ${new Date(w.reviewed_at).toLocaleDateString()}`}
+          </div>
+          {w.admin_note && (
+            <div style={{ fontSize: 11, color: G.muted, marginTop: 6, fontStyle: "italic", background: G.bg, padding: 8, borderRadius: 8, border: `1px solid ${G.border}` }}>
+              <strong style={{ color: colorFor(w.status) }}>Admin note:</strong> {w.admin_note}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function NotificationsCard({ navTo }: { navTo: NavFn }) {
   const { s, G, user } = useAurum();
   const [items, setItems] = useState<any[]>([]);
