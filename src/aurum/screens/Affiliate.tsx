@@ -239,7 +239,22 @@ export function Affiliate({ nav }: { nav: (s: string) => void }) {
         )}
 
         {/* Withdrawal history */}
-        <div style={{ ...s.serif, fontSize: 16, fontWeight: 600, marginTop: 22, marginBottom: 8 }}>Withdrawal requests</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 22, marginBottom: 8 }}>
+          <div style={{ ...s.serif, fontSize: 16, fontWeight: 600 }}>Withdrawal requests</div>
+          {wdHistory.length > 0 && (
+            <button
+              onClick={() => {
+                const header = ["Date", "Amount (USD)", "Status", "Payment account", "Admin note"];
+                const rows = wdHistory.map((w: any) => [new Date(w.created_at).toISOString(), Number(w.amount), w.status, w.payment_account || "", w.admin_note || ""]);
+                const csv = [header, ...rows].map(r => r.map(c => { const v = String(c ?? ""); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }).join(",")).join("\n");
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob); const a = document.createElement("a");
+                a.href = url; a.download = `affiliate-withdrawals-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+              }}
+              style={{ background: "none", border: `1px solid ${G.border}`, color: G.gold, fontSize: 11, fontWeight: 600, cursor: "pointer", padding: "4px 10px", borderRadius: 6 }}
+            >Export CSV</button>
+          )}
+        </div>
         {wdHistory.length === 0 ? (
           <div style={{ ...s.card, padding: 14, fontSize: 12, color: G.muted }}>No withdrawal requests yet.</div>
         ) : (

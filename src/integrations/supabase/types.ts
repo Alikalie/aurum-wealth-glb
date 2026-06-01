@@ -532,6 +532,7 @@ export type Database = {
           is_blocked: boolean
           language: string
           last_name: string | null
+          locked_bonus: number
           payment_edit_locked: boolean
           payment_locked_until: string | null
           phone: string | null
@@ -558,6 +559,7 @@ export type Database = {
           is_blocked?: boolean
           language?: string
           last_name?: string | null
+          locked_bonus?: number
           payment_edit_locked?: boolean
           payment_locked_until?: string | null
           phone?: string | null
@@ -584,6 +586,7 @@ export type Database = {
           is_blocked?: boolean
           language?: string
           last_name?: string | null
+          locked_bonus?: number
           payment_edit_locked?: boolean
           payment_locked_until?: string | null
           phone?: string | null

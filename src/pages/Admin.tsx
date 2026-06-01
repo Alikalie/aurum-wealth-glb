@@ -5,7 +5,7 @@ import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service" | "reports";
 
 function AdminInner() {
   const { s, G, user, isAdmin, isSuperAdmin, isSuperSuperAdmin, loading, signOut, themeMode, setThemeMode } = useAurum();
@@ -17,10 +17,10 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "aff_apps", "aff_wd", "content", "support_contacts", "audit"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "aff_apps", "aff_wd", "reports", "content", "support_contacts", "audit"];
   if (isSuperAdmin || isSuperSuperAdmin) tabs.push("admins");
   if (isSuperSuperAdmin) tabs.push("service");
-  const tabLabels: Record<Tab,string> = { users:"Users", deposits:"Deposits", withdrawals:"Withdrawals", products:"Products", accounts:"Accounts", fx:"FX", content:"Content", news:"News", affiliate:"Affiliate", aff_apps:"Aff. Apps", aff_wd:"Aff. Withdrawals", admins:"Admins", audit:"Audit", support_contacts:"Support Contacts", service:"Service Status" };
+  const tabLabels: Record<Tab,string> = { users:"Users", deposits:"Deposits", withdrawals:"Withdrawals", products:"Products", accounts:"Accounts", fx:"FX", content:"Content", news:"News", affiliate:"Affiliate", aff_apps:"Aff. Apps", aff_wd:"Aff. Withdrawals", admins:"Admins", audit:"Audit", support_contacts:"Support Contacts", service:"Service Status", reports:"Reports" };
   return (
     <div style={{ ...s.app, padding: "16px clamp(12px, 3vw, 24px)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -51,6 +51,7 @@ function AdminInner() {
         {tab === "audit" && <AuditLog />}
         {tab === "support_contacts" && <SupportContactsEditor />}
         {tab === "service" && <ServiceStatusAdmin />}
+        {tab === "reports" && <FinancialReports />}
         <Toast />
       </div>
     </div>
@@ -1373,6 +1374,140 @@ function SupportContactsEditor() {
 
 // ===== Service status (super-super only) =====
 function ServiceStatusAdmin() {
+  return _ServiceStatusAdminImpl();
+}
+
+function downloadCSV(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map(r => r.map(c => {
+    const v = String(c ?? "");
+    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  }).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadPDF(title: string, sections: { heading: string; rows: (string | number)[][] }[]) {
+  // Lightweight printable HTML window — uses browser's "Save as PDF"
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+    <style>body{font-family:Arial,sans-serif;padding:24px;color:#111}h1{font-size:20px;margin:0 0 6px}h2{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px}table{border-collapse:collapse;width:100%;font-size:11px;margin-bottom:8px}td,th{border:1px solid #ddd;padding:4px 6px;text-align:left}th{background:#f4f4f4}.meta{font-size:11px;color:#666;margin-bottom:14px}</style>
+    </head><body><h1>${title}</h1><div class="meta">Generated ${new Date().toLocaleString()}</div>
+    ${sections.map(sec => `<h2>${sec.heading}</h2><table>${sec.rows.map((r, i) => `<tr>${r.map(c => i === 0 ? `<th>${String(c ?? "")}</th>` : `<td>${String(c ?? "")}</td>`).join("")}</tr>`).join("")}</table>`).join("")}
+    <script>window.onload=()=>{setTimeout(()=>window.print(),200)}</script></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(html); w.document.close();
+}
+
+function FinancialReports() {
+  const { s, G, toast } = useAurum();
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<any>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: deps }, { data: wds }, { data: ups }, { data: aw }, { data: prof }] = await Promise.all([
+      supabase.from("deposits").select("id,user_id,amount,method_type,status,created_at,reviewed_at").order("created_at", { ascending: false }).limit(2000),
+      supabase.from("withdrawals").select("id,user_id,amount,status,created_at,reviewed_at,admin_note").order("created_at", { ascending: false }).limit(2000),
+      supabase.from("user_products").select("id,user_id,product_id,purchase_price,status,purchased_at").order("purchased_at", { ascending: false }).limit(2000),
+      supabase.from("affiliate_withdrawals").select("id,user_id,amount,status,created_at,payment_account").order("created_at", { ascending: false }).limit(2000),
+      supabase.from("profiles").select("user_id,full_name,email,currency,invested,earned,withdrawn,locked_bonus,account_number").limit(2000),
+    ]);
+    setData({ deps: deps ?? [], wds: wds ?? [], ups: ups ?? [], aw: aw ?? [], prof: prof ?? [] });
+    setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  if (loading || !data) return <div style={{ color: G.muted }}>Loading reports…</div>;
+
+  const totals = {
+    depApproved: data.deps.filter((d: any) => d.status === "approved").reduce((a: number, d: any) => a + Number(d.amount), 0),
+    depPending: data.deps.filter((d: any) => d.status === "pending").reduce((a: number, d: any) => a + Number(d.amount), 0),
+    wdApproved: data.wds.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    wdPending: data.wds.filter((w: any) => w.status === "pending").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    upTotal: data.ups.reduce((a: number, p: any) => a + Number(p.purchase_price), 0),
+    affWd: data.aw.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    userCount: data.prof.length,
+    investedSum: data.prof.reduce((a: number, p: any) => a + Number(p.invested || 0), 0),
+    earnedSum: data.prof.reduce((a: number, p: any) => a + Number(p.earned || 0), 0),
+    withdrawnSum: data.prof.reduce((a: number, p: any) => a + Number(p.withdrawn || 0), 0),
+  };
+
+  const depRows: (string | number)[][] = [["ID", "User", "Amount", "Method", "Status", "Created", "Reviewed"], ...data.deps.map((d: any) => [d.id, d.user_id, d.amount, d.method_type, d.status, d.created_at, d.reviewed_at || ""])];
+  const wdRows: (string | number)[][] = [["ID", "User", "Amount", "Status", "Created", "Reviewed", "Admin note"], ...data.wds.map((w: any) => [w.id, w.user_id, w.amount, w.status, w.created_at, w.reviewed_at || "", w.admin_note || ""])];
+  const upRows: (string | number)[][] = [["ID", "User", "Product", "Price", "Status", "Purchased"], ...data.ups.map((p: any) => [p.id, p.user_id, p.product_id, p.purchase_price, p.status, p.purchased_at])];
+  const awRows: (string | number)[][] = [["ID", "User", "Amount", "Status", "Created", "Account"], ...data.aw.map((w: any) => [w.id, w.user_id, w.amount, w.status, w.created_at, w.payment_account || ""])];
+  const profRows: (string | number)[][] = [["Account #", "Name", "Email", "Currency", "Invested", "Earned", "Withdrawn", "Locked bonus"], ...data.prof.map((p: any) => [p.account_number || "", p.full_name || "", p.email || "", p.currency, p.invested, p.earned, p.withdrawn, p.locked_bonus || 0])];
+  const summaryRows: (string | number)[][] = [
+    ["Metric", "Value"],
+    ["Total users", totals.userCount],
+    ["Deposits approved (sum)", totals.depApproved.toFixed(2)],
+    ["Deposits pending (sum)", totals.depPending.toFixed(2)],
+    ["Withdrawals approved (sum)", totals.wdApproved.toFixed(2)],
+    ["Withdrawals pending (sum)", totals.wdPending.toFixed(2)],
+    ["Product purchases (sum)", totals.upTotal.toFixed(2)],
+    ["Affiliate withdrawals approved (sum)", totals.affWd.toFixed(2)],
+    ["Profiles invested (sum)", totals.investedSum.toFixed(2)],
+    ["Profiles earned (sum)", totals.earnedSum.toFixed(2)],
+    ["Profiles withdrawn (sum)", totals.withdrawnSum.toFixed(2)],
+  ];
+
+  const exportAllCSV = () => {
+    const all: (string | number)[][] = [];
+    const push = (h: string, rows: (string | number)[][]) => { all.push([h]); rows.forEach(r => all.push(r)); all.push([]); };
+    push("SUMMARY", summaryRows);
+    push("DEPOSITS", depRows);
+    push("WITHDRAWALS", wdRows);
+    push("PRODUCT PURCHASES", upRows);
+    push("AFFILIATE WITHDRAWALS", awRows);
+    push("USER BALANCES", profRows);
+    downloadCSV(`aurum-financials-${new Date().toISOString().slice(0,10)}.csv`, all);
+    toast("CSV downloaded");
+  };
+
+  const exportPDF = () => {
+    downloadPDF("Aurum Financial Report", [
+      { heading: "Summary", rows: summaryRows },
+      { heading: "Deposits", rows: depRows },
+      { heading: "Withdrawals", rows: wdRows },
+      { heading: "Product purchases", rows: upRows },
+      { heading: "Affiliate withdrawals", rows: awRows },
+      { heading: "User balances", rows: profRows },
+    ]);
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Financial Reports</div>
+        <p style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>Snapshot of all financial flows. Export as CSV (for spreadsheets) or PDF (printable).</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button style={{ ...s.btnGold, width: "auto", padding: "10px 18px" }} onClick={exportAllCSV}>⬇ Export CSV</button>
+          <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={exportPDF}>⬇ Export PDF</button>
+          <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={() => { downloadCSV(`deposits-${new Date().toISOString().slice(0,10)}.csv`, depRows); }}>Deposits CSV</button>
+          <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={() => { downloadCSV(`withdrawals-${new Date().toISOString().slice(0,10)}.csv`, wdRows); }}>Withdrawals CSV</button>
+          <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={() => { downloadCSV(`affiliate-withdrawals-${new Date().toISOString().slice(0,10)}.csv`, awRows); }}>Affiliate WD CSV</button>
+        </div>
+      </div>
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 15, marginBottom: 10 }}>Summary</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <tbody>
+            {summaryRows.slice(1).map((r, i) => (
+              <tr key={i} style={{ borderTop: `1px solid ${G.border}` }}>
+                <td style={{ padding: "6px 8px", color: G.muted }}>{r[0]}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600 }}>{r[1]}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function _ServiceStatusAdminImpl() {
   const { s, G, toast } = useAurum();
   const [enabled, setEnabled] = useState(true);
   const [blocked, setBlocked] = useState<string[]>([]);
