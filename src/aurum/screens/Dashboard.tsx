@@ -73,24 +73,24 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
   return (
     <div style={{ padding: "20px 20px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
-        <div>
-          <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
-          <div style={{ ...s.serif, fontSize: 18, fontWeight: 600 }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
-          {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, flexShrink: 0 }}>{initials.toUpperCase()}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: G.muted }}>Welcome back</div>
+            <div style={{ ...s.serif, fontSize: 18, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{profile?.first_name || profile?.full_name || "Guest"}</div>
+            {profile?.account_number && <div style={{ fontSize: 10, color: G.gold, fontFamily: "monospace", marginTop: 2 }}>ID #{profile.account_number}</div>}
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            aria-label="Notifications"
-            onClick={() => navTo("notifications")}
-            style={{ position: "relative", width: 40, height: 40, borderRadius: 20, background: G.card, border: `1px solid ${G.border}`, color: G.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-            {unread > 0 && (
-              <span style={{ position: "absolute", top: -2, right: -2, background: G.red, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 8, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center" }}>{unread > 9 ? "9+" : unread}</span>
-            )}
-          </button>
-          <div style={{ width: 40, height: 40, borderRadius: 20, background: G.gold, color: "#1a1208", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{initials.toUpperCase()}</div>
-        </div>
+        <button
+          aria-label="Notifications"
+          onClick={() => navTo("notifications")}
+          style={{ position: "relative", width: 40, height: 40, borderRadius: 20, background: G.card, border: `1px solid ${G.border}`, color: G.text, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          {unread > 0 && (
+            <span style={{ position: "absolute", top: -2, right: -2, background: G.red, color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: 8, minWidth: 16, height: 16, padding: "0 4px", display: "flex", alignItems: "center", justifyContent: "center" }}>{unread > 9 ? "9+" : unread}</span>
+          )}
+        </button>
       </div>
       <div style={{ ...s.card, padding: 22, marginBottom: 16 }}>
         <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>WALLET BALANCE</div>
