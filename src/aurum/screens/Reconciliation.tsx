@@ -5,6 +5,18 @@ import { fmtMoney } from "../data";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckCircle2, AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 
+function downloadCSV(filename: string, rows: (string | number)[][]) {
+  const csv = rows.map(r => r.map(c => {
+    const v = String(c ?? "");
+    return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  }).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function Reconciliation({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile } = useAurum();
   const cur = profile?.currency ?? "USD";
@@ -96,6 +108,23 @@ export function Reconciliation({ nav }: { nav: (s: string) => void }) {
       <p style={{ color: G.muted, fontSize: 12, lineHeight: 1.55, margin: "0 0 14px" }}>
         Verifies that your profile totals match the sum of all approved deposits, withdrawals, purchases and earnings. Tap any total to expand.
       </p>
+      <button
+        onClick={() => {
+          const rows: (string | number)[][] = [["Type", "Date", "Detail", "Amount", "Currency"]];
+          (data.deps || []).forEach((d: any) => rows.push(["Deposit", new Date(d.created_at || Date.now()).toISOString(), d.method_type || "", Number(d.amount), cur]));
+          (data.ups || []).forEach((p: any) => rows.push(["Purchase", new Date(p.purchased_at || p.cycle_start_at).toISOString(), "", -Number(p.purchase_price), cur]));
+          (data.earnings || []).forEach((t: any) => rows.push(["Earning", new Date(t.created_at).toISOString(), t.note || t.kind, Number(t.amount), t.currency || cur]));
+          (data.wds || []).forEach((w: any) => rows.push(["Withdrawal", new Date(w.created_at || Date.now()).toISOString(), "", -Number(w.amount), cur]));
+          rows.push([]);
+          rows.push(["Totals", "", "", "", ""]);
+          rows.push(["Deposits", "", "", data.sumDeposits, cur]);
+          rows.push(["Purchases", "", "", data.sumPurchases, cur]);
+          rows.push(["Earnings", "", "", data.sumEarnings, cur]);
+          rows.push(["Withdrawals", "", "", data.sumWithdrawals, cur]);
+          downloadCSV(`reconciliation-${new Date().toISOString().slice(0,10)}.csv`, rows);
+        }}
+        style={{ ...s.btnGhost, marginBottom: 12 }}
+      >Export CSV</button>
 
       <div style={{ ...s.card, padding: 16, marginBottom: 12, textAlign: "center" }}>
         <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>MAIN BALANCE</div>
