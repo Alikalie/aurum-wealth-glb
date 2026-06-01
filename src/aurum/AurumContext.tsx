@@ -27,6 +27,7 @@ export type Profile = {
   is_blocked: boolean;
   account_number: number | null;
   promo_code_used: string | null;
+  locked_bonus?: number;
 };
 
 type Ctx = {
