@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAurum } from "./AurumContext";
-import { fmtMoney, fxRatesSync, convertFromUsd } from "./data";
+import { fmtMoney, fxRatesSync } from "./data";
 
 type Row = {
   id: string; name: string; cycle_days: number; days_paid: number;
