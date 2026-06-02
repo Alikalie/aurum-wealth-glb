@@ -5,10 +5,32 @@ import { ScreenShell } from "../ui";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 const FEATURES = [
-  { icon: "◆", t: "Zero commission trades", d: "Trade stocks and ETFs with no fees, ever. Keep more of what you earn." },
-  { icon: "✦", t: "AI-powered insights", d: "Personalized recommendations driven by real-time market analysis." },
-  { icon: "⛨", t: "Bank-grade security", d: "256-bit encryption and SIPC protection up to $500,000." },
-  { icon: "$", t: "Start with $1", d: "Fractional shares let you invest in premium stocks for any amount." },
+  { icon: "◆", t: "Daily-earning cycles", d: "Buy a product, earn a fixed daily payout in your local currency for the full cycle." },
+  { icon: "✦", t: "Multi-currency by design", d: "Prices auto-convert to your country's currency at the live FX rate before purchase." },
+  { icon: "⛨", t: "Bank-grade security", d: "Encrypted at rest and in transit. Strict role-based access and full audit logs." },
+  { icon: "$", t: "Start with as little as $2", d: "Low minimum withdrawal and fractional product entry points — accessible globally." },
+];
+
+const HOW_IT_WORKS = [
+  { n: "01", t: "Create your account", d: "Pick your country, currency and preferred language in under a minute." },
+  { n: "02", t: "Deposit funds", d: "Use the local payment methods listed for your country. Funds reflect after admin approval." },
+  { n: "03", t: "Choose a product", d: "Each product shows price, daily income, cycle days and total return in your currency." },
+  { n: "04", t: "Earn every day", d: "Daily income lands automatically in your wallet for the full product cycle." },
+  { n: "05", t: "Withdraw anytime", d: "Request a withdrawal — funds are held instantly and paid out after admin review." },
+];
+
+const STATS = [
+  { v: "180K+", l: "Active investors" },
+  { v: "60+", l: "Countries supported" },
+  { v: "24/7", l: "Withdrawals" },
+  { v: "<2 USD", l: "Min. withdrawal" },
+];
+
+const FAQS = [
+  { q: "How do daily payouts work?", a: "Each product runs a fixed cycle (e.g. 30 days). You earn a set amount per day, automatically credited to your wallet." },
+  { q: "Can I withdraw the signup bonus?", a: "No — the $1 welcome bonus is locked. You can withdraw your deposits and your earned profits at any time." },
+  { q: "What currencies are supported?", a: "Your wallet is in your country's local currency. Product prices auto-convert at the current FX rate." },
+  { q: "Is my money safe?", a: "We use encrypted storage, role-based admin controls, full audit logs and strict approval workflows for deposits & withdrawals." },
 ];
 
 export function Landing({ nav }: { nav: (s: string) => void }) {
@@ -29,7 +51,7 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
           <h1 style={{ ...s.serif, fontSize: 40, lineHeight: 1.05, margin: "20px 0 14px", fontWeight: 600 }}>
             Welcome to <em style={{ color: G.gold, fontStyle: "italic" }}>Aurum</em>
           </h1>
-          <p style={{ color: G.muted, fontSize: 15, lineHeight: 1.55, margin: 0 }}>Grow your wealth with clarity. Daily-earning investment cycles, instant deposits & withdrawals — built for investors who value precision.</p>
+          <p style={{ color: G.muted, fontSize: 15, lineHeight: 1.55, margin: 0 }}>A global investment platform where you buy a product once and earn a fixed daily income for the entire cycle — paid in your own currency.</p>
         </div>
       </div>
 
@@ -39,6 +61,18 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "6px 0 0", lineHeight: 1.5 }}>By continuing, you agree to our Terms and Privacy Policy.</p>
       </div>
 
+      {/* Stats strip */}
+      <div style={{ padding: "26px 22px 0" }}>
+        <div style={{ ...s.card, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0, padding: 0, overflow: "hidden" }}>
+          {STATS.map((st, i) => (
+            <div key={i} style={{ padding: "14px 12px", textAlign: "center", borderRight: i % 2 === 0 ? `1px solid ${G.border}` : "none", borderBottom: i < 2 ? `1px solid ${G.border}` : "none" }}>
+              <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.gold }}>{st.v}</div>
+              <div style={{ fontSize: 10, color: G.muted, letterSpacing: 0.8, marginTop: 2 }}>{st.l.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div style={{ padding: "20px 22px 0" }}>
         <div style={{ background: G.card, border: `1px dashed ${G.gold}`, borderRadius: 14, padding: 16, textAlign: "center" }}>
           <div style={{ ...s.serif, fontSize: 16, fontWeight: 700, color: G.gold, marginBottom: 4 }}>📱 Mobile app coming soon</div>
@@ -46,7 +80,7 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
         </div>
       </div>
 
-      <div id="aurum-why" style={{ padding: "40px 22px 60px" }}>
+      <div id="aurum-why" style={{ padding: "40px 22px 0" }}>
         <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600 }}>WHY AURUM</div>
         <h2 style={{ ...s.serif, fontSize: 28, margin: "8px 0 24px", fontWeight: 600 }}>Built different. Built for you.</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -60,6 +94,52 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* How it works */}
+      <div style={{ padding: "40px 22px 0" }}>
+        <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600 }}>HOW IT WORKS</div>
+        <h2 style={{ ...s.serif, fontSize: 26, margin: "8px 0 20px", fontWeight: 600 }}>From signup to daily earnings.</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {HOW_IT_WORKS.map(step => (
+            <div key={step.n} style={{ ...s.card, padding: 14, display: "flex", gap: 14 }}>
+              <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.gold, minWidth: 36 }}>{step.n}</div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{step.t}</div>
+                <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.5 }}>{step.d}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Affiliate teaser */}
+      <div style={{ padding: "40px 22px 0" }}>
+        <div style={{ background: G.gold + "11", border: `1px solid ${G.gold}55`, borderRadius: 14, padding: 18 }}>
+          <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600 }}>EARN MORE</div>
+          <div style={{ ...s.serif, fontSize: 20, fontWeight: 600, margin: "6px 0 6px" }}>Affiliate program</div>
+          <p style={{ fontSize: 13, color: G.muted, lineHeight: 1.5, margin: 0 }}>
+            Refer friends with your promo code. Earn a commission when they sign up and make their first deposit.
+          </p>
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div style={{ padding: "40px 22px 60px" }}>
+        <div style={{ fontSize: 11, color: G.gold, letterSpacing: 1.5, fontWeight: 600 }}>FAQ</div>
+        <h2 style={{ ...s.serif, fontSize: 26, margin: "8px 0 16px", fontWeight: 600 }}>Common questions.</h2>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {FAQS.map((f, i) => (
+            <div key={i} style={{ ...s.card, padding: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{f.q}</div>
+              <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.55 }}>{f.a}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 22 }}>
+          <button style={s.btnGold} onClick={() => nav("register")}>Create your free account</button>
+        </div>
+        <p style={{ textAlign: "center", fontSize: 11, color: G.muted, marginTop: 16 }}>© {new Date().getFullYear()} Aurum Wealth · All rights reserved.</p>
       </div>
     </div>
   );
