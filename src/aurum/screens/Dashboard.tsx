@@ -6,6 +6,7 @@ import { NewsFeed } from "./NewsFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import i18n from "@/i18n";
+import { UserPayoutProgress } from "../CountryPayoutWidget";
 
 type NavFn = (s: string, payload?: any) => void;
 
@@ -29,7 +30,7 @@ export function Dashboard({ nav, navTo }: { nav: NavFn; navTo: NavFn }) {
   return (
     <div style={{ height: "100vh", position: "relative" }}>
       <div style={{ height: "100vh", overflowY: "auto", paddingBottom: 80 }}>
-        {tab === "Home" && <HomeTab navTo={navTo} />}
+        {tab === "Home" && <HomeTab navTo={navTo} key={tab} />}
         {tab === "Markets" && <MarketsTab navTo={navTo} />}
         {tab === "Transactions" && <TransactionsTab navTo={navTo} />}
         {tab === "Profile" && <ProfileTab nav={nav} navTo={navTo} />}
@@ -56,9 +57,21 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
   const [unread, setUnread] = useState(0);
   useEffect(() => {
     if (!user) return;
-    supabase.from("notifications").select("id", { count: "exact", head: true })
+    const fetchUnread = () => supabase.from("notifications").select("id", { count: "exact", head: true })
       .eq("user_id", user.id).is("read_at", null)
       .then(({ count }) => setUnread(count ?? 0));
+    fetchUnread();
+    // Refresh when window/tab regains focus (e.g. after viewing notifications screen)
+    const onFocus = () => fetchUnread();
+    window.addEventListener("focus", onFocus);
+    // Subscribe to realtime notification changes for this user
+    const channel = supabase.channel(`notif-bell-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` }, fetchUnread)
+      .subscribe();
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      supabase.removeChannel(channel);
+    };
   }, [user]);
   useEffect(() => {
     supabase.from("app_settings").select("value").eq("key", "affiliate_enabled").maybeSingle()
@@ -102,6 +115,7 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
         </div>
       </div>
       <WithdrawalStatusCard navTo={navTo} />
+      <UserPayoutProgress />
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
       {affEnabled && (
         <button
