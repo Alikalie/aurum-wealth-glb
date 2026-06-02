@@ -4,6 +4,7 @@ import { Toast } from "@/aurum/ui";
 import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
+import { AdminCountryPayoutWidget } from "@/aurum/CountryPayoutWidget";
 
 type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service" | "reports";
 
@@ -1404,6 +1405,9 @@ function FinancialReports() {
   const { s, G, toast } = useAurum();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [country, setCountry] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -1412,7 +1416,7 @@ function FinancialReports() {
       supabase.from("withdrawals").select("id,user_id,amount,status,created_at,reviewed_at,admin_note").order("created_at", { ascending: false }).limit(2000),
       supabase.from("user_products").select("id,user_id,product_id,purchase_price,status,purchased_at").order("purchased_at", { ascending: false }).limit(2000),
       supabase.from("affiliate_withdrawals").select("id,user_id,amount,status,created_at,payment_account").order("created_at", { ascending: false }).limit(2000),
-      supabase.from("profiles").select("user_id,full_name,email,currency,invested,earned,withdrawn,locked_bonus,account_number").limit(2000),
+      supabase.from("profiles").select("user_id,full_name,email,currency,country_code,country_name,invested,earned,withdrawn,locked_bonus,account_number").limit(2000),
     ]);
     setData({ deps: deps ?? [], wds: wds ?? [], ups: ups ?? [], aw: aw ?? [], prof: prof ?? [] });
     setLoading(false);
@@ -1421,26 +1425,44 @@ function FinancialReports() {
 
   if (loading || !data) return <div style={{ color: G.muted }}>Loading reports…</div>;
 
+  // Build country lookup from profiles
+  const userCountry = new Map<string, string>(data.prof.map((p: any) => [p.user_id, p.country_code || ""]));
+  const fromTs = from ? new Date(from + "T00:00:00").getTime() : -Infinity;
+  const toTs = to ? new Date(to + "T23:59:59").getTime() : Infinity;
+  const matchCountry = (uid: string) => !country || userCountry.get(uid) === country;
+  const matchDate = (iso: string) => { const t = new Date(iso).getTime(); return t >= fromTs && t <= toTs; };
+  const profMatch = (p: any) => !country || p.country_code === country;
+
+  const fDeps = data.deps.filter((d: any) => matchDate(d.created_at) && matchCountry(d.user_id));
+  const fWds = data.wds.filter((w: any) => matchDate(w.created_at) && matchCountry(w.user_id));
+  const fUps = data.ups.filter((p: any) => matchDate(p.purchased_at) && matchCountry(p.user_id));
+  const fAw = data.aw.filter((w: any) => matchDate(w.created_at) && matchCountry(w.user_id));
+  const fProf = data.prof.filter(profMatch);
+
   const totals = {
-    depApproved: data.deps.filter((d: any) => d.status === "approved").reduce((a: number, d: any) => a + Number(d.amount), 0),
-    depPending: data.deps.filter((d: any) => d.status === "pending").reduce((a: number, d: any) => a + Number(d.amount), 0),
-    wdApproved: data.wds.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
-    wdPending: data.wds.filter((w: any) => w.status === "pending").reduce((a: number, w: any) => a + Number(w.amount), 0),
-    upTotal: data.ups.reduce((a: number, p: any) => a + Number(p.purchase_price), 0),
-    affWd: data.aw.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
-    userCount: data.prof.length,
-    investedSum: data.prof.reduce((a: number, p: any) => a + Number(p.invested || 0), 0),
-    earnedSum: data.prof.reduce((a: number, p: any) => a + Number(p.earned || 0), 0),
-    withdrawnSum: data.prof.reduce((a: number, p: any) => a + Number(p.withdrawn || 0), 0),
+    depApproved: fDeps.filter((d: any) => d.status === "approved").reduce((a: number, d: any) => a + Number(d.amount), 0),
+    depPending: fDeps.filter((d: any) => d.status === "pending").reduce((a: number, d: any) => a + Number(d.amount), 0),
+    wdApproved: fWds.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    wdPending: fWds.filter((w: any) => w.status === "pending").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    upTotal: fUps.reduce((a: number, p: any) => a + Number(p.purchase_price), 0),
+    affWd: fAw.filter((w: any) => w.status === "approved").reduce((a: number, w: any) => a + Number(w.amount), 0),
+    userCount: fProf.length,
+    investedSum: fProf.reduce((a: number, p: any) => a + Number(p.invested || 0), 0),
+    earnedSum: fProf.reduce((a: number, p: any) => a + Number(p.earned || 0), 0),
+    withdrawnSum: fProf.reduce((a: number, p: any) => a + Number(p.withdrawn || 0), 0),
   };
 
-  const depRows: (string | number)[][] = [["ID", "User", "Amount", "Method", "Status", "Created", "Reviewed"], ...data.deps.map((d: any) => [d.id, d.user_id, d.amount, d.method_type, d.status, d.created_at, d.reviewed_at || ""])];
-  const wdRows: (string | number)[][] = [["ID", "User", "Amount", "Status", "Created", "Reviewed", "Admin note"], ...data.wds.map((w: any) => [w.id, w.user_id, w.amount, w.status, w.created_at, w.reviewed_at || "", w.admin_note || ""])];
-  const upRows: (string | number)[][] = [["ID", "User", "Product", "Price", "Status", "Purchased"], ...data.ups.map((p: any) => [p.id, p.user_id, p.product_id, p.purchase_price, p.status, p.purchased_at])];
-  const awRows: (string | number)[][] = [["ID", "User", "Amount", "Status", "Created", "Account"], ...data.aw.map((w: any) => [w.id, w.user_id, w.amount, w.status, w.created_at, w.payment_account || ""])];
-  const profRows: (string | number)[][] = [["Account #", "Name", "Email", "Currency", "Invested", "Earned", "Withdrawn", "Locked bonus"], ...data.prof.map((p: any) => [p.account_number || "", p.full_name || "", p.email || "", p.currency, p.invested, p.earned, p.withdrawn, p.locked_bonus || 0])];
+  const cc = (uid: string) => userCountry.get(uid) || "";
+  const depRows: (string | number)[][] = [["ID", "User", "Country", "Amount", "Method", "Status", "Created", "Reviewed"], ...fDeps.map((d: any) => [d.id, d.user_id, cc(d.user_id), d.amount, d.method_type, d.status, d.created_at, d.reviewed_at || ""])];
+  const wdRows: (string | number)[][] = [["ID", "User", "Country", "Amount", "Status", "Created", "Reviewed", "Admin note"], ...fWds.map((w: any) => [w.id, w.user_id, cc(w.user_id), w.amount, w.status, w.created_at, w.reviewed_at || "", w.admin_note || ""])];
+  const upRows: (string | number)[][] = [["ID", "User", "Country", "Product", "Price", "Status", "Purchased"], ...fUps.map((p: any) => [p.id, p.user_id, cc(p.user_id), p.product_id, p.purchase_price, p.status, p.purchased_at])];
+  const awRows: (string | number)[][] = [["ID", "User", "Country", "Amount", "Status", "Created", "Account"], ...fAw.map((w: any) => [w.id, w.user_id, cc(w.user_id), w.amount, w.status, w.created_at, w.payment_account || ""])];
+  const profRows: (string | number)[][] = [["Account #", "Name", "Email", "Country", "Currency", "Invested", "Earned", "Withdrawn", "Locked bonus"], ...fProf.map((p: any) => [p.account_number || "", p.full_name || "", p.email || "", p.country_code || "", p.currency, p.invested, p.earned, p.withdrawn, p.locked_bonus || 0])];
   const summaryRows: (string | number)[][] = [
     ["Metric", "Value"],
+    ["Filter — From", from || "(any)"],
+    ["Filter — To", to || "(any)"],
+    ["Filter — Country", country || "(all)"],
     ["Total users", totals.userCount],
     ["Deposits approved (sum)", totals.depApproved.toFixed(2)],
     ["Deposits pending (sum)", totals.depPending.toFixed(2)],
@@ -1481,7 +1503,27 @@ function FinancialReports() {
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ ...s.card, padding: 18 }}>
         <div style={{ ...s.serif, fontSize: 18, marginBottom: 4 }}>Financial Reports</div>
-        <p style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>Snapshot of all financial flows. Export as CSV (for spreadsheets) or PDF (printable).</p>
+        <p style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>Snapshot of all financial flows. Filter by date and country, then export as CSV or PDF.</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 14 }}>
+          <div>
+            <label style={s.label}>FROM</label>
+            <input type="date" style={s.input} value={from} onChange={e => setFrom(e.target.value)} />
+          </div>
+          <div>
+            <label style={s.label}>TO</label>
+            <input type="date" style={s.input} value={to} onChange={e => setTo(e.target.value)} />
+          </div>
+          <div>
+            <label style={s.label}>COUNTRY</label>
+            <select style={{ ...s.input, appearance: "none" }} value={country} onChange={e => setCountry(e.target.value)}>
+              <option value="">All countries</option>
+              {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+            </select>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end" }}>
+            <button style={{ ...s.btnGhost, padding: "10px 12px" }} onClick={() => { setFrom(""); setTo(""); setCountry(""); }}>Clear filters</button>
+          </div>
+        </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button style={{ ...s.btnGold, width: "auto", padding: "10px 18px" }} onClick={exportAllCSV}>⬇ Export CSV</button>
           <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={exportPDF}>⬇ Export PDF</button>
@@ -1490,6 +1532,7 @@ function FinancialReports() {
           <button style={{ ...s.btnGhost, width: "auto", padding: "10px 18px" }} onClick={() => { downloadCSV(`affiliate-withdrawals-${new Date().toISOString().slice(0,10)}.csv`, awRows); }}>Affiliate WD CSV</button>
         </div>
       </div>
+      <AdminCountryPayoutWidget />
       <div style={{ ...s.card, padding: 18 }}>
         <div style={{ ...s.serif, fontSize: 15, marginBottom: 10 }}>Summary</div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
