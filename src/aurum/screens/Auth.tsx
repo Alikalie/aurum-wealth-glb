@@ -370,6 +370,8 @@ export function Register({ nav }: { nav: (s: string) => void }) {
       <p style={{ fontSize: 11, color: G.muted, margin: "6px 2px 0" }}>Have an affiliate code? You get a $1 welcome bonus in your local currency.</p>
 
       <button style={{ ...s.btnGold, marginTop: 22 }} onClick={submit} disabled={load}>{load ? "Creating account…" : "Create account"}</button>
+      <OrDivider />
+      <GoogleButton label="Sign up with Google" />
       <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: G.muted }}>
         Already have an account? <button onClick={() => nav("login")} style={{ background: "none", border: "none", color: G.gold, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Sign in</button>
       </p>
