@@ -16,6 +16,7 @@ import { ProductDetails } from "@/aurum/screens/ProductDetails";
 import { Affiliate } from "@/aurum/screens/Affiliate";
 import { Reconciliation } from "@/aurum/screens/Reconciliation";
 import { Notifications } from "@/aurum/screens/Notifications";
+import { AIConsultant } from "@/aurum/screens/AIConsultant";
 import { ServiceGate } from "@/aurum/ServiceGate";
 
 function Shell() {
@@ -85,6 +86,7 @@ function Shell() {
         {screen === "affiliate" && <Affiliate nav={nav} />}
         {screen === "reconciliation" && <Reconciliation nav={nav} />}
         {screen === "notifications" && <Notifications nav={nav} />}
+        {screen === "ai-consultant" && <AIConsultant nav={nav} />}
         {screen === "support" && <Support nav={nav} />}
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}
