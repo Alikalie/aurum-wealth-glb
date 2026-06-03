@@ -1596,3 +1596,127 @@ function _ServiceStatusAdminImpl() {
     </div>
   );
 }
+
+function NotificationsBroadcast() {
+  const { s, G, toast } = useAurum();
+  const [mode, setMode] = useState<"all" | "user">("all");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [kind, setKind] = useState<"info" | "approved" | "rejected">("info");
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState<any[]>([]);
+  const [selected, setSelected] = useState<any>(null);
+  const [sending, setSending] = useState(false);
+  const [recent, setRecent] = useState<any[]>([]);
+
+  const loadRecent = async () => {
+    const { data } = await supabase
+      .from("notifications")
+      .select("id,title,body,kind,created_at,user_id")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setRecent(data ?? []);
+  };
+  useEffect(() => { loadRecent(); }, []);
+
+  useEffect(() => {
+    if (mode !== "user" || search.trim().length < 2) { setUsers([]); return; }
+    const q = search.trim();
+    supabase.from("profiles").select("user_id,email,full_name,account_number,country_name")
+      .or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
+      .limit(20)
+      .then(({ data }) => setUsers(data ?? []));
+  }, [mode, search]);
+
+  const send = async () => {
+    if (!title.trim() || !body.trim()) { toast("Title and body are required"); return; }
+    if (mode === "user" && !selected) { toast("Pick a user"); return; }
+    if (!confirm(mode === "all" ? "Send this notification to ALL users?" : `Send to ${selected.email}?`)) return;
+    setSending(true);
+    const { data, error } = await supabase.rpc("admin_send_notification", {
+      _target_user_id: mode === "all" ? null : selected.user_id,
+      _title: title.trim(),
+      _body: body.trim(),
+      _kind: kind,
+    });
+    setSending(false);
+    if (error) { toast(error.message); return; }
+    toast(`Sent to ${data ?? 0} user(s)`);
+    setTitle(""); setBody(""); setSelected(null); setSearch("");
+    loadRecent();
+  };
+
+  return (
+    <div style={{ display: "grid", gap: 18 }}>
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 20, marginBottom: 4 }}>Send notification</div>
+        <p style={{ fontSize: 12, color: G.muted, marginBottom: 14 }}>Broadcast to every user or send a targeted message to one user. Delivered to their in-app Notifications screen instantly.</p>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          {(["all", "user"] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: `1px solid ${mode === m ? G.gold : G.border}`, background: mode === m ? G.gold + "22" : "transparent", color: mode === m ? G.gold : G.text, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+              {m === "all" ? "📣 All users" : "👤 Specific user"}
+            </button>
+          ))}
+        </div>
+
+        {mode === "user" && (
+          <>
+            <label style={s.label}>FIND USER (email or name)</label>
+            <input style={s.input} value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} placeholder="Type to search…" />
+            {selected ? (
+              <div style={{ marginTop: 8, padding: 10, border: `1px solid ${G.gold}`, borderRadius: 8, fontSize: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span><strong>{selected.full_name || selected.email}</strong> · {selected.email}{selected.account_number ? ` · #${selected.account_number}` : ""}</span>
+                <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: G.red, cursor: "pointer" }}>Clear</button>
+              </div>
+            ) : users.length > 0 && (
+              <div style={{ marginTop: 6, maxHeight: 200, overflowY: "auto", border: `1px solid ${G.border}`, borderRadius: 8 }}>
+                {users.map(u => (
+                  <div key={u.user_id} onClick={() => setSelected(u)} style={{ padding: 10, borderBottom: `1px solid ${G.border}`, cursor: "pointer", fontSize: 12 }}>
+                    <strong>{u.full_name || "—"}</strong> · {u.email}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        <label style={{ ...s.label, marginTop: 14 }}>TITLE</label>
+        <input style={s.input} value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Scheduled maintenance" maxLength={120} />
+
+        <label style={{ ...s.label, marginTop: 14 }}>MESSAGE</label>
+        <textarea style={{ ...s.input, minHeight: 100, fontFamily: "inherit", resize: "vertical" }} value={body} onChange={e => setBody(e.target.value)} placeholder="Write your message…" maxLength={2000} />
+
+        <label style={{ ...s.label, marginTop: 14 }}>TYPE</label>
+        <select style={s.input} value={kind} onChange={e => setKind(e.target.value as any)}>
+          <option value="info">Info (neutral)</option>
+          <option value="approved">Success / approved (green)</option>
+          <option value="rejected">Alert / rejected (red)</option>
+        </select>
+
+        <button style={{ ...s.btnGold, marginTop: 18 }} onClick={send} disabled={sending}>
+          {sending ? "Sending…" : mode === "all" ? "Broadcast to all users" : "Send notification"}
+        </button>
+      </div>
+
+      <div style={{ ...s.card, padding: 18 }}>
+        <div style={{ ...s.serif, fontSize: 18, marginBottom: 8 }}>Recent notifications (last 20)</div>
+        {recent.length === 0 ? (
+          <div style={{ color: G.muted, fontSize: 12 }}>None yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {recent.map(r => (
+              <div key={r.id} style={{ padding: 10, border: `1px solid ${G.border}`, borderRadius: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <strong style={{ fontSize: 13 }}>{r.title}</strong>
+                  <span style={{ fontSize: 10, color: G.muted }}>{new Date(r.created_at).toLocaleString()}</span>
+                </div>
+                {r.body && <div style={{ fontSize: 12, color: G.muted, marginTop: 4, whiteSpace: "pre-wrap" }}>{r.body}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
