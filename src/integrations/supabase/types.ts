@@ -197,6 +197,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_consultations: {
+        Row: {
+          id: string
+          question: string
+          response: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          question: string
+          response?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          question?: string
+          response?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           key: string
@@ -834,6 +858,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_send_notification: {
+        Args: {
+          _body: string
+          _kind?: string
+          _target_user_id: string
+          _title: string
+        }
+        Returns: number
+      }
       admin_update_affiliate_payment: {
         Args: { _new_account: string; _user_id: string }
         Returns: undefined
