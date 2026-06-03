@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 import { AdminCountryPayoutWidget } from "@/aurum/CountryPayoutWidget";
 
-type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service" | "reports";
+type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service" | "reports" | "notify";
 
 function AdminInner() {
   const { s, G, user, isAdmin, isSuperAdmin, isSuperSuperAdmin, loading, signOut, themeMode, setThemeMode } = useAurum();
@@ -18,10 +18,10 @@ function AdminInner() {
   if (!user) return <div style={{ ...s.app, padding: 40 }}>Please sign in via the main app first.</div>;
   if (!isAdmin) return <div style={{ ...s.app, padding: 40 }}>You are not an admin.</div>;
 
-  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "aff_apps", "aff_wd", "reports", "content", "support_contacts", "audit"];
+  const tabs: Tab[] = ["users", "deposits", "withdrawals", "products", "accounts", "fx", "news", "affiliate", "aff_apps", "aff_wd", "reports", "notify", "content", "support_contacts", "audit"];
   if (isSuperAdmin || isSuperSuperAdmin) tabs.push("admins");
   if (isSuperSuperAdmin) tabs.push("service");
-  const tabLabels: Record<Tab,string> = { users:"Users", deposits:"Deposits", withdrawals:"Withdrawals", products:"Products", accounts:"Accounts", fx:"FX", content:"Content", news:"News", affiliate:"Affiliate", aff_apps:"Aff. Apps", aff_wd:"Aff. Withdrawals", admins:"Admins", audit:"Audit", support_contacts:"Support Contacts", service:"Service Status", reports:"Reports" };
+  const tabLabels: Record<Tab,string> = { users:"Users", deposits:"Deposits", withdrawals:"Withdrawals", products:"Products", accounts:"Accounts", fx:"FX", content:"Content", news:"News", affiliate:"Affiliate", aff_apps:"Aff. Apps", aff_wd:"Aff. Withdrawals", admins:"Admins", audit:"Audit", support_contacts:"Support Contacts", service:"Service Status", reports:"Reports", notify:"Notifications" };
   return (
     <div style={{ ...s.app, padding: "16px clamp(12px, 3vw, 24px)" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
@@ -53,6 +53,7 @@ function AdminInner() {
         {tab === "support_contacts" && <SupportContactsEditor />}
         {tab === "service" && <ServiceStatusAdmin />}
         {tab === "reports" && <FinancialReports />}
+        {tab === "notify" && <NotificationsBroadcast />}
         <Toast />
       </div>
     </div>
