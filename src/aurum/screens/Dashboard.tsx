@@ -117,6 +117,12 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
       <WithdrawalStatusCard navTo={navTo} />
       <UserPayoutProgress />
       <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
+      <button
+        style={{ ...s.btnGhost, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderColor: G.gold, color: G.gold }}
+        onClick={() => navTo("ai-consultant")}
+      >
+        <span aria-hidden>✦</span> AI Investment Consultant
+      </button>
       {affEnabled && (
         <button
           style={{ ...s.btnGold, marginBottom: 16, background: G.gold, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
