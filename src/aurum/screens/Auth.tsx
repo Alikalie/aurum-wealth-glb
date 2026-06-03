@@ -222,6 +222,8 @@ export function Login({ nav }: { nav: (s: string) => void }) {
         <button onClick={() => nav("forgot")} style={{ background: "none", border: "none", color: G.gold, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>Forgot password?</button>
       </div>
       <button style={s.btnGold} onClick={submit} disabled={load}>{load ? "Signing in…" : "Sign in"}</button>
+      <OrDivider />
+      <GoogleButton label="Continue with Google" />
       <p style={{ textAlign: "center", marginTop: 20, fontSize: 13, color: G.muted }}>
         New to Aurum? <button onClick={() => nav("register")} style={{ background: "none", border: "none", color: G.gold, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Create account</button>
       </p>
