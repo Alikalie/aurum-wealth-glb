@@ -18,12 +18,14 @@ import { Reconciliation } from "@/aurum/screens/Reconciliation";
 import { Notifications } from "@/aurum/screens/Notifications";
 import { AIConsultant } from "@/aurum/screens/AIConsultant";
 import { ServiceGate } from "@/aurum/ServiceGate";
+import { supabase } from "@/integrations/supabase/client";
 
 function Shell() {
-  const { s, G, user, loading } = useAurum();
+  const { s, G, user, loading, toast, refreshProfile } = useAurum();
   const [screen, setScreen] = useState("landing");
   const [txId, setTxId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
+  const [paypalProcessing, setPaypalProcessing] = useState(false);
 
   // Capture ?ref= referral code from URL and stash for use after signup
   useEffect(() => {
@@ -48,6 +50,42 @@ function Shell() {
     document.body.style.margin = "0";
   }, [G.bg]);
 
+  // Handle PayPal return: capture order and credit account
+  useEffect(() => {
+    if (loading || !user) return;
+    const url = new URL(window.location.href);
+    const paypal = url.searchParams.get("paypal");
+    const token = url.searchParams.get("token"); // PayPal order id
+    if (!paypal) return;
+    const clean = () => {
+      url.searchParams.delete("paypal");
+      url.searchParams.delete("token");
+      url.searchParams.delete("PayerID");
+      window.history.replaceState({}, "", url.toString());
+    };
+    if (paypal === "cancel") {
+      toast("PayPal payment cancelled");
+      clean();
+      setScreen("dashboard");
+      return;
+    }
+    if (paypal === "success" && token && !paypalProcessing) {
+      setPaypalProcessing(true);
+      supabase.functions.invoke("paypal-capture-order", { body: { order_id: token } })
+        .then(({ data, error }) => {
+          if (error || data?.error) {
+            toast(data?.error || error?.message || "PayPal capture failed");
+          } else {
+            toast(`✓ PayPal deposit credited: $${data.amount_usd}`);
+            refreshProfile?.();
+          }
+          clean();
+          setScreen("deposits-history");
+          setPaypalProcessing(false);
+        });
+    }
+  }, [user, loading, paypalProcessing, toast, refreshProfile]);
+
   // Auto-route to dashboard on login, landing on logout
   useEffect(() => {
     if (loading) return;
@@ -69,6 +107,11 @@ function Shell() {
     <ServiceGate>
     <div style={s.app}>
       <div style={s.phone}>
+        {paypalProcessing && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, color: "#fff", fontSize: 16 }}>
+            Confirming PayPal payment…
+          </div>
+        )}
         {screen === "landing" && <Landing nav={nav} />}
         {screen === "login" && <Login nav={nav} />}
         {screen === "register" && <Register nav={nav} />}
