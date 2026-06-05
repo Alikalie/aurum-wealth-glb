@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Msg = { role: "user" | "assistant"; content: string; at: string };
 
 export function AIConsultant({ nav }: { nav: (s: string) => void }) {
-  const { s, G, user, toast } = useAurum();
+  const { s, G, user, toast, isAdmin } = useAurum();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +16,7 @@ export function AIConsultant({ nav }: { nav: (s: string) => void }) {
   // Load today's prior consultations so the count and history are visible.
   useEffect(() => {
     if (!user) return;
+    if (isAdmin) { setRemaining(null); return; }
     const since = new Date();
     since.setHours(0, 0, 0, 0);
     supabase
@@ -34,7 +35,7 @@ export function AIConsultant({ nav }: { nav: (s: string) => void }) {
         setMsgs(history);
         setRemaining(Math.max(0, 3 - rows.length));
       });
-  }, [user]);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -43,7 +44,7 @@ export function AIConsultant({ nav }: { nav: (s: string) => void }) {
   const ask = async () => {
     const q = input.trim();
     if (!q) return;
-    if (remaining !== null && remaining <= 0) {
+    if (!isAdmin && remaining !== null && remaining <= 0) {
       toast("Daily limit reached (3/day)");
       return;
     }
@@ -72,8 +73,8 @@ export function AIConsultant({ nav }: { nav: (s: string) => void }) {
     <ScreenShell title="AI Investment Consultant" onBack={() => nav("dashboard")}>
       <div style={{ ...s.card, padding: 12, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>DAILY QUESTIONS LEFT</div>
-          <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.gold }}>{remaining ?? "—"} / 3</div>
+          <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>{isAdmin ? "ADMIN MODE" : "DAILY QUESTIONS LEFT"}</div>
+          <div style={{ ...s.serif, fontSize: 22, fontWeight: 700, color: G.gold }}>{isAdmin ? "Unlimited" : `${remaining ?? "—"} / 3`}</div>
         </div>
         <div style={{ width: 44, height: 44, borderRadius: 22, background: G.gold + "22", border: `1px solid ${G.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>✦</div>
       </div>
@@ -109,12 +110,12 @@ export function AIConsultant({ nav }: { nav: (s: string) => void }) {
       <textarea
         value={input}
         onChange={e => setInput(e.target.value)}
-        placeholder={remaining === 0 ? "Daily limit reached — back tomorrow" : "Ask your consultant…"}
-        disabled={remaining === 0 || loading}
+        placeholder={!isAdmin && remaining === 0 ? "Daily limit reached — back tomorrow" : "Ask your consultant…"}
+        disabled={(!isAdmin && remaining === 0) || loading}
         rows={2}
         style={{ ...s.input, resize: "none", fontFamily: "inherit" }}
       />
-      <button style={{ ...s.btnGold, marginTop: 10 }} onClick={ask} disabled={loading || !input.trim() || remaining === 0}>
+      <button style={{ ...s.btnGold, marginTop: 10 }} onClick={ask} disabled={loading || !input.trim() || (!isAdmin && remaining === 0)}>
         {loading ? "Sending…" : "Ask consultant"}
       </button>
       <p style={{ fontSize: 11, color: G.muted, textAlign: "center", margin: "10px 0 0", lineHeight: 1.5 }}>
