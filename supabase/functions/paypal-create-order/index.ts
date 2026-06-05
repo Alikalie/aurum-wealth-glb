@@ -10,8 +10,11 @@ const PAYPAL_BASE = (Deno.env.get("PAYPAL_MODE") ?? "sandbox").toLowerCase() ===
   : "https://api-m.sandbox.paypal.com";
 
 async function getAccessToken(): Promise<string> {
-  const id = Deno.env.get("PAYPAL_CLIENT_ID")!;
-  const secret = Deno.env.get("PAYPAL_CLIENT_SECRET")!;
+  const id = Deno.env.get("PAYPAL_CLIENT_ID");
+  const secret = Deno.env.get("PAYPAL_CLIENT_SECRET");
+  if (!id || !secret) {
+    throw new Error("PayPal not configured (missing PAYPAL_CLIENT_ID or PAYPAL_CLIENT_SECRET).");
+  }
   const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
     method: "POST",
     headers: {
@@ -21,7 +24,10 @@ async function getAccessToken(): Promise<string> {
     body: "grant_type=client_credentials",
   });
   const json = await res.json();
-  if (!res.ok) throw new Error("PayPal auth failed: " + JSON.stringify(json));
+  if (!res.ok) {
+    console.error("PayPal auth failed", res.status, json);
+    throw new Error(`PayPal auth failed (mode=${(Deno.env.get("PAYPAL_MODE") ?? "sandbox")}): ${json?.error_description || json?.error || res.status}. Verify your PAYPAL_CLIENT_ID / SECRET match PAYPAL_MODE.`);
+  }
   return json.access_token;
 }
 
@@ -61,10 +67,16 @@ Deno.serve(async (req) => {
       }),
     });
     const order = await orderRes.json();
-    if (!orderRes.ok) throw new Error("Create order failed: " + JSON.stringify(order));
+    if (!orderRes.ok) {
+      console.error("PayPal create order failed", orderRes.status, order);
+      throw new Error(`PayPal order creation failed: ${order?.message || JSON.stringify(order).slice(0, 200)}`);
+    }
     const approve = order.links?.find((l: any) => l.rel === "approve")?.href;
+    if (!approve) throw new Error("PayPal did not return an approval URL");
     return new Response(JSON.stringify({ order_id: order.id, approve_url: approve }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const msg = String((e as any)?.message ?? e);
+    console.error("paypal-create-order error:", msg);
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

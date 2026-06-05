@@ -5,6 +5,7 @@ import { COUNTRIES, fmtMoney, convertFromUsd, fxRatesSync } from "@/aurum/data";
 import { supabase } from "@/integrations/supabase/client";
 import { ProofViewer } from "@/aurum/ProofViewer";
 import { AdminCountryPayoutWidget } from "@/aurum/CountryPayoutWidget";
+import { AIFloatingButton } from "@/aurum/AIFloatingButton";
 
 type Tab = "users" | "deposits" | "withdrawals" | "products" | "accounts" | "fx" | "content" | "news" | "affiliate" | "aff_apps" | "aff_wd" | "admins" | "audit" | "support_contacts" | "service" | "reports" | "notify";
 
@@ -55,6 +56,7 @@ function AdminInner() {
         {tab === "reports" && <FinancialReports />}
         {tab === "notify" && <NotificationsBroadcast />}
         <Toast />
+        <AIFloatingButton />
       </div>
     </div>
   );

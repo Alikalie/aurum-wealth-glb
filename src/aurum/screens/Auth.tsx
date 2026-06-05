@@ -115,10 +115,15 @@ export function Landing({ nav }: { nav: (s: string) => void }) {
       </div>
 
       <div style={{ padding: "20px 22px 0" }}>
-        <div style={{ background: G.card, border: `1px dashed ${G.gold}`, borderRadius: 14, padding: 16, textAlign: "center" }}>
-          <div style={{ ...s.serif, fontSize: 16, fontWeight: 700, color: G.gold, marginBottom: 4 }}>📱 Mobile app coming soon</div>
-          <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.5 }}>Download the Aurum app for iOS & Android — launching soon. Use the web app in the meantime.</div>
-        </div>
+        <a
+          href="https://median.co/share/pwpmzel#apk"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "block", textDecoration: "none", background: G.card, border: `1px solid ${G.gold}`, borderRadius: 14, padding: 16, textAlign: "center" }}
+        >
+          <div style={{ ...s.serif, fontSize: 16, fontWeight: 700, color: G.gold, marginBottom: 4 }}>📱 Download the Aurum Wealth app</div>
+          <div style={{ fontSize: 12, color: G.muted, lineHeight: 1.5 }}>Install on Android (APK) for the full mobile experience. Tap to download.</div>
+        </a>
       </div>
 
       <div id="aurum-why" style={{ padding: "40px 22px 0" }}>

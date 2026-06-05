@@ -18,6 +18,7 @@ import { Reconciliation } from "@/aurum/screens/Reconciliation";
 import { Notifications } from "@/aurum/screens/Notifications";
 import { AIConsultant } from "@/aurum/screens/AIConsultant";
 import { ServiceGate } from "@/aurum/ServiceGate";
+import { AIFloatingButton } from "@/aurum/AIFloatingButton";
 import { supabase } from "@/integrations/supabase/client";
 
 function Shell() {
@@ -71,10 +72,27 @@ function Shell() {
     }
     if (paypal === "success" && token && !paypalProcessing) {
       setPaypalProcessing(true);
+      // Idempotency guard: don't re-capture the same order if user revisits with token.
+      const seenKey = `aurum-paypal-captured-${token}`;
+      if (sessionStorage.getItem(seenKey)) {
+        clean();
+        setPaypalProcessing(false);
+        setScreen("deposits-history");
+        return;
+      }
+      sessionStorage.setItem(seenKey, "1");
       supabase.functions.invoke("paypal-capture-order", { body: { order_id: token } })
-        .then(({ data, error }) => {
+        .then(async ({ data, error }) => {
+          let serverMsg: string | undefined;
+          const ctx: any = (error as any)?.context;
+          if (ctx && typeof ctx.json === "function") {
+            try { const j = await ctx.json(); serverMsg = j?.error; } catch {}
+          }
           if (error || data?.error) {
-            toast(data?.error || error?.message || "PayPal capture failed");
+            toast(serverMsg || data?.error || error?.message || "PayPal capture failed");
+          } else if (data?.already) {
+            toast("PayPal deposit already credited");
+            refreshProfile?.();
           } else {
             toast(`✓ PayPal deposit credited: $${data.amount_usd}`);
             refreshProfile?.();
@@ -134,6 +152,9 @@ function Shell() {
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}
         <Toast />
+        {user && screen !== "landing" && screen !== "login" && screen !== "register" && screen !== "forgot" && screen !== "ai-consultant" && (
+          <AIFloatingButton />
+        )}
       </div>
     </div>
     </ServiceGate>
