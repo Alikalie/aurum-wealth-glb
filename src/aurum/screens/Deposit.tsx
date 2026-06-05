@@ -15,6 +15,7 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<Method>("mobile_money");
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [hasLocalMethod, setHasLocalMethod] = useState<boolean | null>(null);
   const [chosen, setChosen] = useState<any>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -23,6 +24,25 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
 
   const amountNum = Number(amount) || 0;
   const amountUsd = amountNum / (fxRate || 1);
+
+  // Determine if user's country has any local (non-PayPal) accounts. If not,
+  // auto-select PayPal as the primary method.
+  useEffect(() => {
+    const country = profile?.country_code;
+    if (!country) return;
+    supabase
+      .from("admin_payment_accounts")
+      .select("id,method_type,country_code")
+      .eq("is_active", true)
+      .in("method_type", ["mobile_money", "bank"])
+      .then(({ data }) => {
+        const all = data ?? [];
+        const local = all.filter((a: any) => a.country_code === country);
+        const hasLocal = local.length > 0;
+        setHasLocalMethod(hasLocal);
+        if (!hasLocal) setMethod("paypal");
+      });
+  }, [profile?.country_code]);
 
   useEffect(() => {
     const country = profile?.country_code;
@@ -66,7 +86,15 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
           cancel_url: `${origin}?paypal=cancel`,
         },
       });
-      if (error || !data?.approve_url) throw new Error(error?.message || data?.error || "PayPal init failed");
+      // Surface the real server error (Supabase wraps non-2xx into a generic message).
+      let serverMsg: string | undefined;
+      const ctx: any = (error as any)?.context;
+      if (ctx && typeof ctx.json === "function") {
+        try { const j = await ctx.json(); serverMsg = j?.error; } catch {}
+      }
+      if (error || !data?.approve_url) {
+        throw new Error(serverMsg || data?.error || error?.message || "PayPal init failed");
+      }
       window.location.href = data.approve_url;
     } catch (e: any) {
       setPaypalLoading(false);
@@ -113,11 +141,17 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
       {step === 2 && (
         <>
           <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px" }}>Choose how you'll send the {fmtMoney(Number(amount), cur)}.</p>
+          {hasLocalMethod === false && (
+            <div style={{ ...s.card, marginBottom: 12, borderColor: G.gold, fontSize: 12, color: G.muted, lineHeight: 1.5 }}>
+              No local mobile-money or bank options for your country yet — PayPal is selected as your primary payment method.
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(["mobile_money", "bank", "paypal"] as Method[]).map(m => (
               <button key={m} onClick={() => setMethod(m)} style={{ ...s.btnGhost, borderColor: method === m ? G.gold : G.border, color: method === m ? G.gold : G.text, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 {m === "mobile_money" ? <Smartphone size={18} /> : m === "bank" ? <Building2 size={18} /> : <CreditCard size={18} />}
                 {m === "mobile_money" ? "Mobile Money" : m === "bank" ? "Bank Transfer" : "PayPal"}
+                {m === "paypal" && hasLocalMethod === false ? " (Recommended)" : ""}
               </button>
             ))}
           </div>
