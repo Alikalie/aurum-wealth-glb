@@ -37,7 +37,15 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // Rate limit: 3 per UTC day
+    // Check admin role — admins have unlimited free usage
+    const { data: roleRows } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin");
+    const isAdmin = (roleRows ?? []).length > 0;
+
+    // Rate limit: 3 per UTC day (admins bypass)
     const since = new Date();
     since.setUTCHours(0, 0, 0, 0);
     const { count } = await admin
@@ -45,7 +53,7 @@ Deno.serve(async (req) => {
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .gte("used_at", since.toISOString());
-    if ((count ?? 0) >= 3) {
+    if (!isAdmin && (count ?? 0) >= 3) {
       return new Response(JSON.stringify({ error: "Daily limit reached (3 questions per day). Try again tomorrow." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -99,8 +107,8 @@ Deno.serve(async (req) => {
 
     await admin.from("ai_consultations").insert({ user_id: userId, question, response });
 
-    const remaining = Math.max(0, 3 - ((count ?? 0) + 1));
-    return new Response(JSON.stringify({ response, remaining }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const remaining = isAdmin ? null : Math.max(0, 3 - ((count ?? 0) + 1));
+    return new Response(JSON.stringify({ response, remaining, unlimited: isAdmin }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("ai-consultant error", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
