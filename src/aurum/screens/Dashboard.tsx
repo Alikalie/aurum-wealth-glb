@@ -6,7 +6,7 @@ import { NewsFeed } from "./NewsFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { LANGUAGES } from "@/i18n";
 import i18n from "@/i18n";
-import { UserPayoutProgress } from "../CountryPayoutWidget";
+// UserPayoutProgress intentionally removed from Home per product requirements.
 
 type NavFn = (s: string, payload?: any) => void;
 
@@ -114,15 +114,11 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
           <button style={{ ...s.btnGhost, padding: 11, fontSize: 12 }} onClick={() => navTo("withdraw")}>↑ Withdraw</button>
         </div>
       </div>
-      <WithdrawalStatusCard navTo={navTo} />
-      <UserPayoutProgress />
-      <button style={{ ...s.btnGhost, marginBottom: 16 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
-      <button
-        style={{ ...s.btnGhost, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderColor: G.gold, color: G.gold }}
-        onClick={() => navTo("ai-consultant")}
-      >
-        <span aria-hidden>✦</span> AI Investment Consultant
+      <button style={{ ...s.btnGhost, marginBottom: 12 }} onClick={() => navTo("my-products")}>My products & active cycles →</button>
+      <button style={{ ...s.btnGhost, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }} onClick={() => navTo("support")}>
+        💬 Contact Admin / Support
       </button>
+      <ApkDownloadButton />
       {affEnabled && (
         <button
           style={{ ...s.btnGold, marginBottom: 16, background: G.gold, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
@@ -133,6 +129,28 @@ function HomeTab({ navTo }: { navTo: NavFn }) {
       )}
       <NewsFeed />
     </div>
+  );
+}
+
+function ApkDownloadButton() {
+  const { s, G } = useAurum();
+  const [hidden, setHidden] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("aurum-apk-clicked") === "1";
+  });
+  if (hidden) return null;
+  const onClick = () => {
+    localStorage.setItem("aurum-apk-clicked", "1");
+    setHidden(true);
+    window.open("https://median.co/share/pwpmzel#apk", "_blank", "noopener,noreferrer");
+  };
+  return (
+    <button
+      onClick={onClick}
+      style={{ ...s.btnGhost, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, borderColor: G.gold, color: G.gold }}
+    >
+      📱 Download the Aurum Wealth app
+    </button>
   );
 }
 
