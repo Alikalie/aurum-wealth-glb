@@ -18,6 +18,7 @@ import { Reconciliation } from "@/aurum/screens/Reconciliation";
 import { Notifications } from "@/aurum/screens/Notifications";
 import { AIConsultant } from "@/aurum/screens/AIConsultant";
 import { ServiceGate } from "@/aurum/ServiceGate";
+import { AIFloatingButton } from "@/aurum/AIFloatingButton";
 import { supabase } from "@/integrations/supabase/client";
 
 function Shell() {
@@ -134,6 +135,9 @@ function Shell() {
         {screen === "privacy" && <Privacy nav={nav} />}
         {screen === "currency" && <Currency nav={nav} />}
         <Toast />
+        {user && screen !== "landing" && screen !== "login" && screen !== "register" && screen !== "forgot" && screen !== "ai-consultant" && (
+          <AIFloatingButton />
+        )}
       </div>
     </div>
     </ServiceGate>
