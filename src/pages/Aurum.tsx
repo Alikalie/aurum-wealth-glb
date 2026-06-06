@@ -19,7 +19,6 @@ import { Notifications } from "@/aurum/screens/Notifications";
 import { AIConsultant } from "@/aurum/screens/AIConsultant";
 import { ServiceGate } from "@/aurum/ServiceGate";
 import { AIFloatingButton } from "@/aurum/AIFloatingButton";
-import { supabase } from "@/integrations/supabase/client";
 
 function Shell() {
   const { s, G, user, loading } = useAurum();
