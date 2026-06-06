@@ -22,11 +22,10 @@ import { AIFloatingButton } from "@/aurum/AIFloatingButton";
 import { supabase } from "@/integrations/supabase/client";
 
 function Shell() {
-  const { s, G, user, loading, toast, refreshProfile } = useAurum();
+  const { s, G, user, loading } = useAurum();
   const [screen, setScreen] = useState("landing");
   const [txId, setTxId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
-  const [paypalProcessing, setPaypalProcessing] = useState(false);
 
   // Capture ?ref= referral code from URL and stash for use after signup
   useEffect(() => {
@@ -51,59 +50,6 @@ function Shell() {
     document.body.style.margin = "0";
   }, [G.bg]);
 
-  // Handle PayPal return: capture order and credit account
-  useEffect(() => {
-    if (loading || !user) return;
-    const url = new URL(window.location.href);
-    const paypal = url.searchParams.get("paypal");
-    const token = url.searchParams.get("token"); // PayPal order id
-    if (!paypal) return;
-    const clean = () => {
-      url.searchParams.delete("paypal");
-      url.searchParams.delete("token");
-      url.searchParams.delete("PayerID");
-      window.history.replaceState({}, "", url.toString());
-    };
-    if (paypal === "cancel") {
-      toast("PayPal payment cancelled");
-      clean();
-      setScreen("dashboard");
-      return;
-    }
-    if (paypal === "success" && token && !paypalProcessing) {
-      setPaypalProcessing(true);
-      // Idempotency guard: don't re-capture the same order if user revisits with token.
-      const seenKey = `aurum-paypal-captured-${token}`;
-      if (sessionStorage.getItem(seenKey)) {
-        clean();
-        setPaypalProcessing(false);
-        setScreen("deposits-history");
-        return;
-      }
-      sessionStorage.setItem(seenKey, "1");
-      supabase.functions.invoke("paypal-capture-order", { body: { order_id: token } })
-        .then(async ({ data, error }) => {
-          let serverMsg: string | undefined;
-          const ctx: any = (error as any)?.context;
-          if (ctx && typeof ctx.json === "function") {
-            try { const j = await ctx.json(); serverMsg = j?.error; } catch {}
-          }
-          if (error || data?.error) {
-            toast(serverMsg || data?.error || error?.message || "PayPal capture failed");
-          } else if (data?.already) {
-            toast("PayPal deposit already credited");
-            refreshProfile?.();
-          } else {
-            toast(`✓ PayPal deposit credited: $${data.amount_usd}`);
-            refreshProfile?.();
-          }
-          clean();
-          setScreen("deposits-history");
-          setPaypalProcessing(false);
-        });
-    }
-  }, [user, loading, paypalProcessing, toast, refreshProfile]);
-
   // Auto-route to dashboard on login, landing on logout
   useEffect(() => {
     if (loading) return;
@@ -125,11 +71,6 @@ function Shell() {
     <ServiceGate>
     <div style={s.app}>
       <div style={s.phone}>
-        {paypalProcessing && (
-          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, color: "#fff", fontSize: 16 }}>
-            Confirming PayPal payment…
-          </div>
-        )}
         {screen === "landing" && <Landing nav={nav} />}
         {screen === "login" && <Login nav={nav} />}
         {screen === "register" && <Register nav={nav} />}

@@ -3,9 +3,9 @@ import { useAurum } from "../AurumContext";
 import { ScreenShell } from "../ui";
 import { fmtMoney, convertFromUsd, fxRatesSync } from "../data";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Building2, CreditCard } from "lucide-react";
+import { Smartphone, Building2 } from "lucide-react";
 
-type Method = "mobile_money" | "bank" | "paypal";
+type Method = "mobile_money" | "bank";
 
 export function Deposit({ nav }: { nav: (s: string) => void }) {
   const { s, G, user, profile, toast } = useAurum();
@@ -15,34 +15,13 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<Method>("mobile_money");
   const [accounts, setAccounts] = useState<any[]>([]);
-  const [hasLocalMethod, setHasLocalMethod] = useState<boolean | null>(null);
   const [chosen, setChosen] = useState<any>(null);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [paypalLoading, setPaypalLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const amountNum = Number(amount) || 0;
   const amountUsd = amountNum / (fxRate || 1);
-
-  // Determine if user's country has any local (non-PayPal) accounts. If not,
-  // auto-select PayPal as the primary method.
-  useEffect(() => {
-    const country = profile?.country_code;
-    if (!country) return;
-    supabase
-      .from("admin_payment_accounts")
-      .select("id,method_type,country_code")
-      .eq("is_active", true)
-      .in("method_type", ["mobile_money", "bank"])
-      .then(({ data }) => {
-        const all = data ?? [];
-        const local = all.filter((a: any) => a.country_code === country);
-        const hasLocal = local.length > 0;
-        setHasLocalMethod(hasLocal);
-        if (!hasLocal) setMethod("paypal");
-      });
-  }, [profile?.country_code]);
 
   useEffect(() => {
     const country = profile?.country_code;
@@ -70,37 +49,6 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
   };
 
   const copy = (text: string) => { navigator.clipboard.writeText(text); toast("Copied"); };
-
-  const payWithPayPal = async () => {
-    if (!user) return;
-    const usd = amountUsd;
-    if (!usd || usd <= 0) { toast("Enter a valid amount"); return; }
-    if (usd < 1) { toast("Minimum PayPal deposit is $1 USD"); return; }
-    setPaypalLoading(true);
-    try {
-      const origin = window.location.origin + window.location.pathname;
-      const { data, error } = await supabase.functions.invoke("paypal-create-order", {
-        body: {
-          amount_usd: Number(usd.toFixed(2)),
-          return_url: `${origin}?paypal=success`,
-          cancel_url: `${origin}?paypal=cancel`,
-        },
-      });
-      // Surface the real server error (Supabase wraps non-2xx into a generic message).
-      let serverMsg: string | undefined;
-      const ctx: any = (error as any)?.context;
-      if (ctx && typeof ctx.json === "function") {
-        try { const j = await ctx.json(); serverMsg = j?.error; } catch {}
-      }
-      if (error || !data?.approve_url) {
-        throw new Error(serverMsg || data?.error || error?.message || "PayPal init failed");
-      }
-      window.location.href = data.approve_url;
-    } catch (e: any) {
-      setPaypalLoading(false);
-      toast(e?.message || "PayPal error");
-    }
-  };
 
   const submit = async () => {
     if (!user) return;
@@ -141,17 +89,11 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
       {step === 2 && (
         <>
           <p style={{ color: G.muted, fontSize: 13, margin: "0 0 16px" }}>Choose how you'll send the {fmtMoney(Number(amount), cur)}.</p>
-          {hasLocalMethod === false && (
-            <div style={{ ...s.card, marginBottom: 12, borderColor: G.gold, fontSize: 12, color: G.muted, lineHeight: 1.5 }}>
-              No local mobile-money or bank options for your country yet — PayPal is selected as your primary payment method.
-            </div>
-          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {(["mobile_money", "bank", "paypal"] as Method[]).map(m => (
+            {(["mobile_money", "bank"] as Method[]).map(m => (
               <button key={m} onClick={() => setMethod(m)} style={{ ...s.btnGhost, borderColor: method === m ? G.gold : G.border, color: method === m ? G.gold : G.text, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {m === "mobile_money" ? <Smartphone size={18} /> : m === "bank" ? <Building2 size={18} /> : <CreditCard size={18} />}
-                {m === "mobile_money" ? "Mobile Money" : m === "bank" ? "Bank Transfer" : "PayPal"}
-                {m === "paypal" && hasLocalMethod === false ? " (Recommended)" : ""}
+                {m === "mobile_money" ? <Smartphone size={18} /> : <Building2 size={18} />}
+                {m === "mobile_money" ? "Mobile Money" : "Bank Transfer"}
               </button>
             ))}
           </div>
@@ -165,27 +107,7 @@ export function Deposit({ nav }: { nav: (s: string) => void }) {
 
       {step === 3 && (
         <>
-          {method === "paypal" ? (
-            <>
-              <div style={{ ...s.card, marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: G.muted, letterSpacing: 0.5 }}>YOU WILL BE CHARGED</div>
-                <div style={{ ...s.serif, fontSize: 28, fontWeight: 600, color: G.gold }}>{fmtMoney(amountUsd, "USD")}</div>
-                {cur !== "USD" && (
-                  <div style={{ fontSize: 12, color: G.muted, marginTop: 4 }}>≈ {fmtMoney(amountNum, cur)} at 1 USD = {fxRate} {cur}</div>
-                )}
-                <div style={{ marginTop: 14, padding: 12, background: G.bg, borderRadius: 8, fontSize: 12, color: G.muted, lineHeight: 1.5 }}>
-                  You'll be redirected to PayPal to complete payment. Once paid, your account is credited automatically — no proof upload or admin review needed.
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                <button style={s.btnGhost} onClick={() => setStep(2)} disabled={paypalLoading}>Back</button>
-                <button style={{ ...s.btnGold, background: "#0070ba", color: "#fff", borderColor: "#0070ba" }} onClick={payWithPayPal} disabled={paypalLoading}>
-                  {paypalLoading ? "Redirecting…" : "Pay with PayPal"}
-                </button>
-              </div>
-              <button style={{ ...s.btnGhost, marginTop: 8 }} onClick={() => nav("dashboard")} disabled={paypalLoading}>Cancel</button>
-            </>
-          ) : !chosen ? (
+          {!chosen ? (
             <div style={{ ...s.card, color: G.muted, fontSize: 13 }}>No active {method} account configured by admin yet. Please contact support.</div>
           ) : (
             <>
