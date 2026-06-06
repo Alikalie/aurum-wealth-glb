@@ -57,28 +57,56 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Daily limit reached (3 questions per day). Try again tomorrow." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Pull lightweight user context for personalization
-    const [{ data: profile }, { data: products }] = await Promise.all([
-      admin.from("profiles").select("first_name,country_name,currency,invested,earned,withdrawn,locked_bonus").eq("user_id", userId).maybeSingle(),
+    // Pull rich context: profile, owned products, catalogue, payment options, support contact
+    const [{ data: profile }, { data: userProducts }, { data: catalogue }, { data: payAccounts }, { data: support }] = await Promise.all([
+      admin.from("profiles").select("first_name,country_code,country_name,currency,invested,earned,withdrawn,locked_bonus").eq("user_id", userId).maybeSingle(),
       admin.from("user_products").select("status,purchase_price,days_paid,total_earned,product_id,cycle_start_at,products(name,cycle_days,daily_income,price)").eq("user_id", userId).limit(20),
+      admin.from("products").select("name,price,daily_income,cycle_days,expected_return_pct,purchase_limit,is_active").eq("is_active", true).order("price", { ascending: true }).limit(30),
+      admin.from("admin_payment_accounts").select("method_type,label,country_code,account_name,is_active").eq("is_active", true).limit(60),
+      admin.from("support_content").select("body").eq("id", 1).maybeSingle(),
     ]);
 
     const ctxLines: string[] = [];
     if (profile) {
-      ctxLines.push(`User: ${profile.first_name ?? "investor"} (${profile.country_name ?? "—"}, currency ${profile.currency})`);
+      ctxLines.push(`User: ${profile.first_name ?? "investor"} (${profile.country_name ?? "—"} / ${profile.country_code ?? "—"}, currency ${profile.currency})`);
       ctxLines.push(`Wallet — invested: ${profile.invested}, earned: ${profile.earned}, withdrawn: ${profile.withdrawn}, locked bonus: ${profile.locked_bonus ?? 0} (all in ${profile.currency}).`);
     }
-    if (products && products.length) {
-      ctxLines.push("Active/owned products:");
-      for (const p of products as any[]) {
+    if (userProducts && userProducts.length) {
+      ctxLines.push("User's owned products:");
+      for (const p of userProducts as any[]) {
         const name = p.products?.name ?? "Product";
         ctxLines.push(`- ${name} | status: ${p.status} | days paid: ${p.days_paid}/${p.products?.cycle_days ?? "?"} | total earned: ${p.total_earned}`);
       }
     } else {
       ctxLines.push("User currently owns no products.");
     }
+    if (catalogue && catalogue.length) {
+      ctxLines.push("Available product catalogue (USD prices — starter products are the cheapest):");
+      for (const p of catalogue as any[]) {
+        ctxLines.push(`- ${p.name}: $${p.price} → $${p.daily_income}/day × ${p.cycle_days} days (≈${p.expected_return_pct}% total). Limit: ${p.purchase_limit || "unlimited"}.`);
+      }
+    }
+    if (payAccounts && payAccounts.length) {
+      const local = (payAccounts as any[]).filter(a => !profile?.country_code || !a.country_code || a.country_code === profile.country_code);
+      ctxLines.push("Deposit options available to this user:");
+      const seen = new Set<string>();
+      for (const a of local) {
+        const key = `${a.method_type}-${a.label}`;
+        if (seen.has(key)) continue; seen.add(key);
+        ctxLines.push(`- ${a.method_type} · ${a.label}${a.country_code ? ` (country: ${a.country_code})` : " (global)"}`);
+      }
+      if (!local.length) ctxLines.push("- No deposit accounts currently configured for this country — direct user to contact support.");
+    }
+    if (support?.body) {
+      ctxLines.push("Support / contact information (use when user asks how to reach admin/support):");
+      ctxLines.push(String(support.body).slice(0, 600));
+    }
 
-    const systemPrompt = `You are Aurum's in-app investment consultant. You guide users on how Aurum's daily-earning products work and help them think through their investment choices. You DO NOT track external markets, give regulated financial advice, or promise returns. Always reference the user's own context below when relevant. Keep answers concise (under 220 words), warm, and practical. If asked about a specific product they own, explain how it works for them (cycle days, daily income, total earned so far). Never invent numbers — only use the context provided.\n\n--- USER CONTEXT ---\n${ctxLines.join("\n")}`;
+    const userSystemPrompt = `You are Aurum's in-app investment consultant for END USERS. Your job: help the user understand how Aurum products work, which deposit methods apply to their country, how withdrawals/affiliate work, and guide them to a sensible starter product if they own none. You DO NOT give regulated financial advice, do not track external markets, and never promise returns. If the user asks how to contact support or admins, give them the exact support details from the context. Keep answers warm, practical, under 220 words. Never invent numbers, prices, or accounts — only use the context below.\n\n--- CONTEXT ---\n${ctxLines.join("\n")}`;
+
+    const adminSystemPrompt = `You are Aurum's internal operations assistant for an ADMINISTRATOR. The viewer is verified as an admin of the platform. Answer operational questions about: managing users, approving/rejecting deposits & withdrawals, crediting or debiting user balances (for double-payment-proof corrections), editing payment methods / products / admin payment accounts even after locks, audit logs, affiliate management, and platform settings. You can reference the same product catalogue, payment accounts and support content as the user-facing assistant, but you should respond in an operational, concise, neutral tone — not a sales/coaching tone. If asked an end-user question, answer it but flag that this is the admin view. Never invent platform features that aren't in the context. Keep answers under 260 words.\n\n--- CONTEXT ---\n${ctxLines.join("\n")}`;
+
+    const systemPrompt = isAdmin ? adminSystemPrompt : userSystemPrompt;
 
     const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

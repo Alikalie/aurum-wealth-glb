@@ -129,6 +129,7 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
   const [bucket, setBucket] = useState<"invested" | "earned" | "withdrawn">("earned");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
+  const [mode, setMode] = useState<"credit" | "debit">("credit");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -165,12 +166,17 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
   const fund = async () => {
     const a = Number(amount);
     if (!a || a <= 0) { toast("Enter amount"); return; }
+    if (mode === "debit" && !note.trim()) { toast("A note/reason is required for debits"); return; }
+    const signed = mode === "debit" ? -Math.abs(a) : Math.abs(a);
+    const finalNote = mode === "debit"
+      ? `[DEBIT] ${note.trim()}`
+      : (note || null);
     setBusy(true);
     const { data: { user: me } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("admin_credits").insert({ user_id: u.user_id, bucket, amount: a, note: note || null, created_by: me!.id });
+    const { error } = await supabase.from("admin_credits").insert({ user_id: u.user_id, bucket, amount: signed, note: finalNote, created_by: me!.id });
     setBusy(false);
     if (error) { toast(error.message); return; }
-    toast(`Credited ${fmtMoney(a, u.currency)} to ${bucket}`);
+    toast(`${mode === "debit" ? "Debited" : "Credited"} ${fmtMoney(a, u.currency)} ${mode === "debit" ? "from" : "to"} ${bucket}`);
     setAmount(""); setNote("");
     supabase.from("transactions").select("*").eq("user_id", u.user_id).order("created_at", { ascending: false }).limit(50).then(({ data }) => setTxs(data ?? []));
   };
@@ -200,15 +206,26 @@ function UserDrawer({ user: u, onClose }: { user: any; onClose: () => void }) {
         </div>
 
         <div style={{ ...s.card, marginBottom: 14 }}>
-          <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>Fund user</div>
+          <div style={{ ...s.serif, fontSize: 16, marginBottom: 10 }}>Adjust user balance</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+            <button onClick={() => setMode("credit")} style={{ flex: 1, padding: 8, borderRadius: 6, border: `1px solid ${mode === "credit" ? G.gold : G.border}`, background: mode === "credit" ? G.gold + "22" : "transparent", color: mode === "credit" ? G.gold : G.text, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>+ Credit</button>
+            <button onClick={() => setMode("debit")} style={{ flex: 1, padding: 8, borderRadius: 6, border: `1px solid ${mode === "debit" ? G.red : G.border}`, background: mode === "debit" ? G.red + "22" : "transparent", color: mode === "debit" ? G.red : G.text, fontSize: 12, cursor: "pointer", fontWeight: 600 }}>− Debit (deduct)</button>
+          </div>
           <select style={{ ...s.input, appearance: "none" }} value={bucket} onChange={e => setBucket(e.target.value as any)}>
             <option value="invested">Invested (deposit credit)</option>
             <option value="earned">Earned (withdrawable bonus)</option>
             <option value="withdrawn">Withdrawn (adjust withdrawn total)</option>
           </select>
           <input style={{ ...s.input, marginTop: 8 }} type="number" placeholder={`Amount in ${u.currency}`} value={amount} onChange={e => setAmount(e.target.value)} />
-          <input style={{ ...s.input, marginTop: 8 }} placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
-          <button style={{ ...s.btnGold, marginTop: 10 }} onClick={fund} disabled={busy}>{busy ? "Crediting…" : "Apply credit"}</button>
+          <input style={{ ...s.input, marginTop: 8 }} placeholder={mode === "debit" ? "Reason (required, e.g. duplicate proof)" : "Note (optional)"} value={note} onChange={e => setNote(e.target.value)} />
+          <button style={{ ...s.btnGold, marginTop: 10, ...(mode === "debit" ? { background: G.red, color: "#fff", borderColor: G.red } : {}) }} onClick={fund} disabled={busy}>
+            {busy ? "Applying…" : mode === "debit" ? "Apply debit" : "Apply credit"}
+          </button>
+          {mode === "debit" && (
+            <p style={{ fontSize: 11, color: G.muted, margin: "8px 0 0", lineHeight: 1.4 }}>
+              Use this to correct double payment proofs or other mistakes. The deduction is logged in the user's transactions and the audit log.
+            </p>
+          )}
         </div>
 
         <div style={{ ...s.card, marginBottom: 14 }}>
